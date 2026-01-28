@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lumina | Modern Job Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #FAFAFA; /* Zinc-50 */
+        }
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #E4E4E7;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #A1A1AA;
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#F4F4F5',
+                            100: '#E4E4E7',
+                            900: '#18181B', // Zinc-900
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="text-zinc-900 antialiased min-h-screen flex flex-col">
+
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center cursor-pointer" onclick="app.router('landing')">
+                    <div class="bg-zinc-900 text-white p-1.5 rounded-lg mr-2">
+                        <i data-lucide="briefcase" class="w-5 h-5"></i>
+                    </div>
+                    <span class="font-bold text-xl tracking-tight">Lumina</span>
+                </div>
+                <div class="hidden md:flex items-center space-x-6" id="nav-links">
+                    <!-- Dynamic Nav Links -->
+                </div>
+                <div class="flex items-center space-x-4" id="auth-buttons">
+                    <!-- Dynamic Auth Buttons -->
+                </div>
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center">
+                    <button onclick="document.getElementById('mobile-menu').classList.toggle('hidden')" class="text-zinc-500 hover:text-zinc-900">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden bg-white border-b border-zinc-200 p-4">
+            <div id="mobile-nav-links" class="flex flex-col space-y-3"></div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main id="app-root" class="flex-grow flex flex-col relative">
+        <!-- Views will be injected here -->
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-zinc-200 py-12 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 text-center">
+            <p class="text-zinc-500 text-sm">© 2026 Lumina Jobs. Crafted for the modern workforce.</p>
+        </div>
+    </footer>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-zinc-900 text-white px-6 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3">
+        <span id="toast-message">Notification</span>
+    </div>
+
+    <script>
+        // --- DATA STORE (Simulated Backend) ---
+        const Store = {
+            db: {
+                users: [],
+                jobs: [],
+                applications: []
+            },
+            currentUser: null,
+
+            init() {
+                const stored = localStorage.getItem('lumina_db');
+                if (stored) {
+                    this.db = JSON.parse(stored);
+                } else {
+                    // Seed initial data
+                    this.seedData();
+                }
+                const session = sessionStorage.getItem('lumina_user');
+                if (session) this.currentUser = JSON.parse(session);
+            },
+
+            save() {
+                localStorage.setItem('lumina_db', JSON.stringify(this.db));
+            },
+
+            seedData() {
+                // Create some mock data
+                this.db.users = [
+                    { id: 'u1', name: 'TechFlow Inc.', email: 'employer@test.com', password: '123', role: 'employer', company: 'TechFlow Inc.', bio: 'We build the infrastructure for the next generation of internet companies.' },
+                    { id: 'u2', name: 'Jane Doe', email: 'user@test.com', password: '123', role: 'seeker', skills: ['JavaScript', 'React'], bio: 'Senior Frontend Developer with 5 years experience.' }
+                ];
+                
+                const desc1 = `
+<h4 class="text-lg font-bold text-zinc-900 mb-2">About the Role</h4>
+<p class="mb-4">We are looking for a visionary Senior Product Designer to join our core team. You will be responsible for defining the user experience across our entire product suite.</p>
+
+<h4 class="text-lg font-bold text-zinc-900 mb-2">Key Responsibilities</h4>
+<ul class="list-disc pl-5 mb-4 space-y-1">
+    <li>Lead design projects from concept to launch.</li>
+    <li>Collaborate closely with engineers and product managers.</li>
+    <li>Conduct user research and usability testing.</li>
+    <li>Create high-fidelity prototypes and design systems.</li>
+</ul>
+
+<h4 class="text-lg font-bold text-zinc-900 mb-2">Requirements</h4>
+<ul class="list-disc pl-5 mb-4 space-y-1">
+    <li>5+ years of experience in product design.</li>
+    <li>Strong portfolio showcasing web and mobile work.</li>
+    <li>Proficiency in Figma and prototyping tools.</li>
+</ul>`;
+
+                const desc2 = `
+<h4 class="text-lg font-bold text-zinc-900 mb-2">The Opportunity</h4>
+<p class="mb-4">Join a fast-paced team building high-performance web applications. We need a React expert who cares about code quality and performance.</p>
+
+<h4 class="text-lg font-bold text-zinc-900 mb-2">What you'll do</h4>
+<ul class="list-disc pl-5 mb-4 space-y-1">
+    <li>Architect and build scalable frontend components.</li>
+    <li>Optimize applications for maximum speed.</li>
+    <li>Mentor junior developers.</li>
+</ul>`;
+
+                this.db.jobs = [
+                    { id: 'j1', employerId: 'u1', title: 'Senior Product Designer', type: 'Full-time', salary: '$120k - $150k', location: 'Remote', description: desc1, postedAt: new Date().toISOString() },
+                    { id: 'j2', employerId: 'u1', title: 'Frontend Engineer', type: 'Contract', salary: '$60/hr', location: 'New York, NY', description: desc2, postedAt: new Date(Date.now() - 86400000).toISOString() },
+                    { id: 'j3', employerId: 'u1', title: 'Marketing Manager', type: 'Full-time', salary: '$90k - $110k', location: 'London, UK', description: '<p>Lead our growth marketing initiatives...</p>', postedAt: new Date(Date.now() - 172800000).toISOString() }
+                ];
+                this.save();
+            },
+
+            register(name, email, password, role, extraField) {
+                if (this.db.users.find(u => u.email === email)) throw new Error('Email already exists');
+                
+                const user = { 
+                    id: 'u' + Date.now(), 
+                    name, 
+                    email, 
+                    password, 
+                    role, 
+                    company: role === 'employer' ? extraField : null, 
+                    bio: role === 'seeker' ? extraField : 'Hiring Manager',
+                    skills: [] 
+                };
+                
+                this.db.users.push(user);
+                this.save();
+                this.login(email, password);
+            },
+
+            login(email, password) {
+                const user = this.db.users.find(u => u.email === email && u.password === password);
+                if (!user) throw new Error('Invalid credentials');
+                this.currentUser = user;
+                sessionStorage.setItem('lumina_user', JSON.stringify(user));
+                return user;
+            },
+
+            logout() {
+                this.currentUser = null;
+                sessionStorage.removeItem('lumina_user');
+            },
+
+            postJob(jobData) {
+                // Ensure description handles newlines if plain text
+                let desc = jobData.description;
+                if (!desc.includes('<p>')) {
+                    desc = desc.split('\n').map(line => line.trim() ? `<p class="mb-2">${line}</p>` : '').join('');
+                }
+
+                const job = { id: 'j' + Date.now(), employerId: this.currentUser.id, postedAt: new Date().toISOString(), ...jobData, description: desc };
+                this.db.jobs.unshift(job); // Add to top
+                this.save();
+            },
+
+            applyToJob(jobId) {
+                if (this.db.applications.find(a => a.jobId === jobId && a.seekerId === this.currentUser.id)) {
+                    throw new Error('Already applied');
+                }
+                const application = {
+                    id: 'a' + Date.now(),
+                    jobId,
+                    seekerId: this.currentUser.id,
+                    employerId: this.db.jobs.find(j => j.id === jobId).employerId,
+                    status: 'Applied', // Applied, Reviewing, Interview, Rejected, Hired
+                    appliedAt: new Date().toISOString()
+                };
+                this.db.applications.push(application);
+                this.save();
+            },
+
+            getJobs() { return this.db.jobs; },
+            getMyJobs() { return this.db.jobs.filter(j => j.employerId === this.currentUser.id); },
+            getMyApplications() { return this.db.applications.filter(a => a.seekerId === this.currentUser.id); },
+            getJobApplications(jobId) { return this.db.applications.filter(a => a.jobId === jobId); },
+            
+            updateApplicationStatus(appId, status) {
+                const app = this.db.applications.find(a => a.id === appId);
+                if (app) {
+                    app.status = status;
+                    this.save();
+                }
+            }
+        };
+
+        // --- APP LOGIC ---
+        const app = {
+            state: {
+                searchTerm: ''
+            },
+            
+            init() {
+                Store.init();
+                this.router(Store.currentUser ? (Store.currentUser.role === 'employer' ? 'employer-dash' : 'seeker-dash') : 'landing');
+                this.updateNav();
+                lucide.createIcons();
+            },
+
+            router(route, params = {}) {
+                const root = document.getElementById('app-root');
+                window.scrollTo(0,0);
+                
+                // Route Guards
+                if (['employer-dash', 'post-job'].includes(route) && (!Store.currentUser || Store.currentUser.role !== 'employer')) return this.router('login');
+                if (['seeker-dash'].includes(route) && (!Store.currentUser || Store.currentUser.role !== 'seeker')) return this.router('login');
+
+                switch(route) {
+                    case 'landing':
+                        root.innerHTML = this.views.landing();
+                        break;
+                    case 'login':
+                        root.innerHTML = this.views.auth('login');
+                        break;
+                    case 'register':
+                        root.innerHTML = this.views.auth('register');
+                        break;
+                    case 'employer-dash':
+                        root.innerHTML = this.views.employerDashboard();
+                        break;
+                    case 'post-job':
+                        root.innerHTML = this.views.postJob();
+                        break;
+                    case 'job-details':
+                        root.innerHTML = this.views.jobDetails(params.id);
+                        break;
+                    case 'seeker-dash':
+                        root.innerHTML = this.views.seekerDashboard();
+                        break;
+                }
+                this.updateNav();
+                lucide.createIcons();
+            },
+
+            updateNav() {
+                const navLinks = document.getElementById('nav-links');
+                const authButtons = document.getElementById('auth-buttons');
+                const mobileNav = document.getElementById('mobile-nav-links');
+
+                if (Store.currentUser) {
+                    const isEmployer = Store.currentUser.role === 'employer';
+                    const homeRoute = isEmployer ? 'employer-dash' : 'seeker-dash';
+                    
+                    navLinks.innerHTML = `
+                        <a onclick="app.router('${homeRoute}')" class="text-zinc-500 hover:text-zinc-900 font-medium cursor-pointer">Dashboard</a>
+                        ${isEmployer ? `<a onclick="app.router('post-job')" class="text-zinc-500 hover:text-zinc-900 font-medium cursor-pointer">Post a Job</a>` : ''}
+                        <a class="text-zinc-500 hover:text-zinc-900 font-medium cursor-pointer">Profile</a>
+                    `;
+
+                    authButtons.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <div class="text-right hidden sm:block">
+                                <span class="block text-sm font-bold text-zinc-900">${Store.currentUser.name}</span>
+                                <span class="block text-xs text-zinc-500">${isEmployer ? 'Employer' : 'Job Seeker'}</span>
+                            </div>
+                            <button onclick="app.handleLogout()" class="text-sm font-medium text-red-600 hover:text-red-700 bg-red-50 px-3 py-1.5 rounded-lg transition">Sign Out</button>
+                        </div>
+                    `;
+                } else {
+                    navLinks.innerHTML = `
+                        <a onclick="app.router('landing')" class="text-zinc-500 hover:text-zinc-900 font-medium cursor-pointer">Home</a>
+                        <a href="#features" class="text-zinc-500 hover:text-zinc-900 font-medium cursor-pointer">Features</a>
+                    `;
+                    authButtons.innerHTML = `
+                        <button onclick="app.router('login')" class="text-zinc-600 hover:text-zinc-900 font-medium px-3 py-2">Log in</button>
+                        <button onclick="app.router('register')" class="bg-zinc-900 text-white px-4 py-2 rounded-lg font-medium hover:bg-zinc-800 transition shadow-sm">Sign up</button>
+                    `;
+                }
+                
+                // Mirror to mobile
+                mobileNav.innerHTML = navLinks.innerHTML + (Store.currentUser ? `<button onclick="app.handleLogout()" class="text-left text-red-600 font-medium py-2">Sign Out</button>` : '');
+            },
+
+            handleLogout() {
+                Store.logout();
+                this.toast('Logged out successfully');
+                this.router('landing');
+            },
+
+            toast(msg) {
+                const t = document.getElementById('toast');
+                const tm = document.getElementById('toast-message');
+                tm.innerText = msg;
+                t.classList.remove('translate-y-20', 'opacity-0');
+                setTimeout(() => t.classList.add('translate-y-20', 'opacity-0'), 3000);
+            },
+            
+            toggleAuthFields(role) {
+                const label = document.getElementById('extra-field-label');
+                const input = document.getElementById('extra-field-input');
+                if (role === 'employer') {
+                    label.innerText = 'Company Name';
+                    input.placeholder = 'Acme Corp';
+                } else {
+                    label.innerText = 'Professional Headline';
+                    input.placeholder = 'e.g. Senior Product Designer';
+                }
+            },
+
+            handleSearch(e) {
+                this.state.searchTerm = e.target.value.toLowerCase();
+                this.router('seeker-dash'); // Re-render dashboard with filter
+                // In a real app we would just update the DOM list, but re-render is fine for this size
+                const input = document.querySelector('input[type="search"]');
+                if(input) {
+                    input.value = this.state.searchTerm;
+                    input.focus();
+                }
+            },
+
+            // --- VIEWS ---
+            views: {
+                landing() {
+                    return `
+                        <div class="fade-in">
+                            <!-- Hero -->
+                            <section class="pt-24 pb-12 px-4 text-center max-w-5xl mx-auto">
+                                <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-100 text-zinc-600 text-xs font-medium mb-8 border border-zinc-200">
+                                    <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                                    New jobs added daily
+                                </div>
+                                <h1 class="text-5xl md:text-7xl font-bold tracking-tight text-zinc-900 mb-6">
+                                    Find your next <br class="hidden md:block" />
+                                    <span class="text-zinc-400">career defining</span> moment.
+                                </h1>
+                                <p class="text-lg text-zinc-500 mb-10 max-w-2xl mx-auto leading-relaxed">
+                                    Connect with top-tier companies or find world-class talent. Lumina is the minimalist bridge to your professional future.
+                                </p>
+                                <div class="flex flex-col sm:flex-row justify-center gap-4">
+                                    <button onclick="app.router('register')" class="px-8 py-4 bg-zinc-900 text-white rounded-xl font-medium text-lg hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Get Started</button>
+                                    <button onclick="document.getElementById('demo-creds').classList.toggle('hidden')" class="px-8 py-4 bg-white text-zinc-900 border border-zinc-200 rounded-xl font-medium text-lg hover:bg-zinc-50 transition">View Demo Credentials</button>
+                                </div>
+                                
+                                <div id="demo-creds" class="hidden mt-8 p-6 bg-white border border-zinc-200 rounded-xl max-w-md mx-auto text-left shadow-sm">
+                                    <h3 class="font-bold text-sm text-zinc-900 mb-2">Demo Accounts</h3>
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <p class="font-medium text-zinc-500">Employer</p>
+                                            <p class="text-zinc-900">employer@test.com</p>
+                                            <p class="text-zinc-400">pass: 123</p>
+                                        </div>
+                                        <div>
+                                            <p class="font-medium text-zinc-500">Job Seeker</p>
+                                            <p class="text-zinc-900">user@test.com</p>
+                                            <p class="text-zinc-400">pass: 123</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </section>
+
+                            <!-- Stats -->
+                            <section class="py-12 border-y border-zinc-200 bg-white">
+                                <div class="max-w-7xl mx-auto px-4 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+                                    <div><div class="text-3xl font-bold text-zinc-900">20k+</div><div class="text-zinc-500 text-sm mt-1">Active Jobs</div></div>
+                                    <div><div class="text-3xl font-bold text-zinc-900">500+</div><div class="text-zinc-500 text-sm mt-1">Companies</div></div>
+                                    <div><div class="text-3xl font-bold text-zinc-900">10k+</div><div class="text-zinc-500 text-sm mt-1">Hired Users</div></div>
+                                    <div><div class="text-3xl font-bold text-zinc-900">4.9/5</div><div class="text-zinc-500 text-sm mt-1">User Rating</div></div>
+                                </div>
+                            </section>
+                        </div>
+                    `;
+                },
+
+                auth(type) {
+                    const isRegister = type === 'register';
+                    return `
+                        <div class="flex-grow flex items-center justify-center px-4 py-12 fade-in">
+                            <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl shadow-zinc-100 border border-zinc-200">
+                                <div class="text-center mb-8">
+                                    <h2 class="text-2xl font-bold text-zinc-900">${isRegister ? 'Create an account' : 'Welcome back'}</h2>
+                                    <p class="text-zinc-500 text-sm mt-2">${isRegister ? 'Join thousands of professionals today.' : 'Enter your details to access your account.'}</p>
+                                </div>
+
+                                <form onsubmit="event.preventDefault(); app.handleAuth(this, '${type}')" class="space-y-4">
+                                    ${isRegister ? `
+                                        <div>
+                                            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Full Name</label>
+                                            <input name="name" type="text" required class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition" placeholder="John Doe">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Role</label>
+                                            <div class="grid grid-cols-2 gap-3">
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="role" value="seeker" checked class="peer sr-only" onchange="app.toggleAuthFields('seeker')">
+                                                    <div class="text-center py-3 border border-zinc-200 rounded-lg peer-checked:bg-zinc-900 peer-checked:text-white peer-checked:border-zinc-900 transition hover:bg-zinc-50">Job Seeker</div>
+                                                </label>
+                                                <label class="cursor-pointer">
+                                                    <input type="radio" name="role" value="employer" class="peer sr-only" onchange="app.toggleAuthFields('employer')">
+                                                    <div class="text-center py-3 border border-zinc-200 rounded-lg peer-checked:bg-zinc-900 peer-checked:text-white peer-checked:border-zinc-900 transition hover:bg-zinc-50">Employer</div>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label id="extra-field-label" class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Professional Headline</label>
+                                            <input id="extra-field-input" name="extraField" type="text" required class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition" placeholder="e.g. Senior Product Designer">
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <div>
+                                        <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Email Address</label>
+                                        <input name="email" type="email" required class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition" placeholder="you@example.com">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-semibold text-zinc-500 uppercase tracking-wider mb-1">Password</label>
+                                        <input name="password" type="password" required class="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 transition" placeholder="••••••••">
+                                    </div>
+
+                                    <button type="submit" class="w-full py-3 bg-zinc-900 text-white rounded-lg font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200/50 mt-6">
+                                        ${isRegister ? 'Sign Up' : 'Sign In'}
+                                    </button>
+                                </form>
+
+                                <div class="mt-6 text-center text-sm text-zinc-500">
+                                    ${isRegister ? 'Already have an account?' : 'Don\'t have an account?'} 
+                                    <a onclick="app.router('${isRegister ? 'login' : 'register'}')" class="text-zinc-900 font-semibold cursor-pointer hover:underline">
+                                        ${isRegister ? 'Log in' : 'Sign up'}
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                },
+
+                employerDashboard() {
+                    const jobs = Store.getMyJobs();
+                    // ... existing code start ...
+                    let html = `
+                        <div class="max-w-7xl mx-auto px-4 py-10 w-full fade-in">
+                            <div class="flex justify-between items-end mb-8">
+                                <div>
+                                    <h1 class="text-3xl font-bold text-zinc-900">Employer Dashboard</h1>
+                                    <p class="text-zinc-500 mt-2">Manage your postings and applicants.</p>
+                                </div>
+                                <button onclick="app.router('post-job')" class="bg-zinc-900 text-white px-5 py-2.5 rounded-lg font-medium hover:bg-zinc-800 transition flex items-center gap-2">
+                                    <i data-lucide="plus" class="w-4 h-4"></i> Post New Job
+                                </button>
+                            </div>
+
+                            <div class="grid lg:grid-cols-3 gap-8">
+                                <!-- Active Jobs List -->
+                                <div class="lg:col-span-2 space-y-6">
+                                    <h2 class="font-semibold text-lg text-zinc-900">Your Active Job Postings</h2>
+                                    ${jobs.length === 0 ? `
+                                        <div class="text-center py-12 bg-white rounded-xl border border-zinc-200 border-dashed">
+                                            <p class="text-zinc-400">You haven't posted any jobs yet.</p>
+                                        </div>
+                                    ` : jobs.map(job => {
+                                        const apps = Store.getJobApplications(job.id);
+                                        return `
+                                        <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm hover:shadow-md transition">
+                                            <div class="flex justify-between items-start">
+                                                <div>
+                                                    <h3 class="font-bold text-xl text-zinc-900 cursor-pointer hover:text-blue-600" onclick="app.router('job-details', {id: '${job.id}'})">${job.title}</h3>
+                                                    <div class="flex items-center gap-3 mt-2 text-sm text-zinc-500">
+                                                        <span class="flex items-center gap-1"><i data-lucide="map-pin" class="w-3 h-3"></i> ${job.location}</span>
+                                                        <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3"></i> Posted ${new Date(job.postedAt).toLocaleDateString()}</span>
+                                                        <span class="bg-zinc-100 px-2 py-0.5 rounded text-xs font-medium">${job.type}</span>
+                                                    </div>
+                                                </div>
+                                                <div class="text-right">
+                                                    <div class="text-2xl font-bold text-zinc-900">${apps.length}</div>
+                                                    <div class="text-xs text-zinc-500 uppercase tracking-wide">Applicants</div>
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Applicants Accordion (Simplified) -->
+                                            ${apps.length > 0 ? `
+                                                <div class="mt-6 pt-6 border-t border-zinc-100">
+                                                    <h4 class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-3">Recent Applicants</h4>
+                                                    <div class="space-y-3">
+                                                        ${apps.map(app => {
+                                                            const seeker = Store.db.users.find(u => u.id === app.seekerId);
+                                                            return `
+                                                                <div class="flex items-center justify-between p-3 bg-zinc-50 rounded-lg">
+                                                                    <div class="flex items-center gap-3">
+                                                                        <div class="w-8 h-8 bg-zinc-200 rounded-full flex items-center justify-center text-xs font-bold text-zinc-600">
+                                                                            ${seeker.name.charAt(0)}
+                                                                        </div>
+                                                                        <div>
+                                                                            <div class="font-medium text-sm text-zinc-900">${seeker.name}</div>
+                                                                            <div class="text-xs text-zinc-500">${seeker.email}</div>
+                                                                            <div class="text-[10px] text-zinc-400 truncate w-32">${seeker.bio || 'No bio'}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="flex items-center gap-2">
+                                                                        <select onchange="app.handleStatusChange('${app.id}', this.value)" class="text-xs bg-white border border-zinc-300 rounded px-2 py-1 outline-none focus:border-zinc-900">
+                                                                            <option value="Applied" ${app.status === 'Applied' ? 'selected' : ''}>Applied</option>
+                                                                            <option value="Interview" ${app.status === 'Interview' ? 'selected' : ''}>Interview</option>
+                                                                            <option value="Hired" ${app.status === 'Hired' ? 'selected' : ''}>Hired</option>
+                                                                            <option value="Rejected" ${app.status === 'Rejected' ? 'selected' : ''}>Rejected</option>
+                                                                        </select>
+                                                                    </div>
+                                                                </div>
+                                                            `;
+                                                        }).join('')}
+                                                    </div>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `}).join('')}
+                                </div>
+
+                                <!-- Sidebar -->
+                                <div class="space-y-6">
+                                    <div class="bg-zinc-900 text-white p-6 rounded-xl">
+                                        <h3 class="font-bold text-lg mb-2">Company Profile</h3>
+                                        <p class="text-zinc-400 text-sm mb-4">Complete your profile to attract better talent.</p>
+                                        <div class="space-y-3">
+                                            <div class="flex justify-between text-sm">
+                                                <span class="text-zinc-400">Company</span>
+                                                <span class="font-medium text-right truncate w-32">${Store.currentUser.company || 'Not set'}</span>
+                                            </div>
+                                            <div class="flex justify-between text-sm">
+                                                <span class="text-zinc-400">Member since</span>
+                                                <span class="font-medium">2026</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    return html;
+                },
+
+                postJob() {
+                    return `
+                        <div class="max-w-2xl mx-auto px-4 py-12 fade-in">
+                            <button onclick="app.router('employer-dash')" class="text-zinc-500 hover:text-zinc-900 text-sm mb-6 flex items-center gap-1">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Dashboard
+                            </button>
+                            <h1 class="text-3xl font-bold text-zinc-900 mb-8">Post a New Job</h1>
+                            <form onsubmit="event.preventDefault(); app.handlePostJob(this)" class="bg-white p-8 rounded-xl border border-zinc-200 shadow-sm space-y-6">
+                                <div>
+                                    <label class="block text-sm font-medium text-zinc-700 mb-1">Job Title</label>
+                                    <input name="title" required class="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none" placeholder="e.g. Senior Product Designer">
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-zinc-700 mb-1">Employment Type</label>
+                                        <select name="type" class="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 outline-none bg-white">
+                                            <option>Full-time</option>
+                                            <option>Part-time</option>
+                                            <option>Contract</option>
+                                            <option>Freelance</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-zinc-700 mb-1">Location</label>
+                                        <input name="location" required class="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 outline-none" placeholder="e.g. Remote / New York">
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-zinc-700 mb-1">Salary Range</label>
+                                    <input name="salary" required class="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 outline-none" placeholder="e.g. $120k - $150k">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-zinc-700 mb-1">Description</label>
+                                    <div class="text-xs text-zinc-500 mb-2">HTML is supported for formatting (e.g. &lt;ul&gt;, &lt;b&gt;).</div>
+                                    <textarea name="description" required rows="8" class="w-full px-4 py-2 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 outline-none font-mono text-sm" placeholder="<h4>Key Responsibilities</h4>
+<ul>
+  <li>...</li>
+</ul>"></textarea>
+                                </div>
+                                <div class="pt-4">
+                                    <button type="submit" class="w-full bg-zinc-900 text-white py-3 rounded-lg font-bold hover:bg-zinc-800 transition">Publish Job Posting</button>
+                                </div>
+                            </form>
+                        </div>
+                    `;
+                },
+
+                seekerDashboard() {
+                    let jobs = Store.getJobs();
+                    // Filter jobs based on search
+                    if (app.state.searchTerm) {
+                        jobs = jobs.filter(j => {
+                            const employer = Store.db.users.find(u => u.id === j.employerId);
+                            const text = (j.title + ' ' + j.location + ' ' + (employer?.company || '')).toLowerCase();
+                            return text.includes(app.state.searchTerm);
+                        });
+                    }
+
+                    const applications = Store.getMyApplications();
+
+                    // Calculate status counts
+                    const statusCounts = applications.reduce((acc, curr) => {
+                        acc[curr.status] = (acc[curr.status] || 0) + 1;
+                        return acc;
+                    }, {});
+
+                    return `
+                        <div class="max-w-7xl mx-auto px-4 py-10 w-full fade-in">
+                            <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                                <div>
+                                    <h1 class="text-3xl font-bold text-zinc-900">Hello, ${Store.currentUser.name}</h1>
+                                    <p class="text-zinc-500 mt-2">Find your next opportunity or track your applications.</p>
+                                </div>
+                                <div class="relative w-full md:w-96">
+                                    <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400"></i>
+                                    <input 
+                                        type="search" 
+                                        placeholder="Search by role, company, or location..." 
+                                        oninput="app.handleSearch(event)"
+                                        value="${app.state.searchTerm}"
+                                        class="w-full pl-10 pr-4 py-3 bg-white border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900/20 shadow-sm"
+                                    >
+                                </div>
+                            </div>
+
+                            <div class="grid lg:grid-cols-4 gap-8">
+                                <!-- Sidebar: Stats & Profile -->
+                                <div class="space-y-6">
+                                    <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
+                                        <div class="mb-6 pb-6 border-b border-zinc-100">
+                                            <div class="text-sm text-zinc-500 mb-1">Headline</div>
+                                            <div class="font-medium text-zinc-900">${Store.currentUser.bio || 'No headline set'}</div>
+                                        </div>
+                                        <h3 class="font-bold text-sm text-zinc-900 mb-4 uppercase tracking-wide">Application Status</h3>
+                                        <div class="space-y-3">
+                                            <div class="flex justify-between items-center text-sm">
+                                                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Applied</span>
+                                                <span class="font-bold">${statusCounts['Applied'] || 0}</span>
+                                            </div>
+                                            <div class="flex justify-between items-center text-sm">
+                                                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Interview</span>
+                                                <span class="font-bold">${statusCounts['Interview'] || 0}</span>
+                                            </div>
+                                            <div class="flex justify-between items-center text-sm">
+                                                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> Hired</span>
+                                                <span class="font-bold">${statusCounts['Hired'] || 0}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
+                                         <h3 class="font-bold text-sm text-zinc-900 mb-4 uppercase tracking-wide">My Applications</h3>
+                                         <div class="space-y-4 max-h-[400px] overflow-y-auto">
+                                            ${applications.length === 0 ? '<p class="text-xs text-zinc-400">No applications yet.</p>' : 
+                                                applications.map(app => {
+                                                    const job = Store.db.jobs.find(j => j.id === app.jobId);
+                                                    let statusColor = 'bg-blue-100 text-blue-800';
+                                                    if (app.status === 'Rejected') statusColor = 'bg-red-100 text-red-800';
+                                                    if (app.status === 'Hired') statusColor = 'bg-green-100 text-green-800';
+                                                    
+                                                    return `
+                                                    <div class="border-b border-zinc-100 pb-3 last:border-0 last:pb-0">
+                                                        <div class="font-semibold text-sm truncate">${job.title}</div>
+                                                        <div class="flex justify-between items-center mt-2">
+                                                            <span class="text-xs text-zinc-500">${new Date(app.appliedAt).toLocaleDateString()}</span>
+                                                            <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${statusColor}">${app.status}</span>
+                                                        </div>
+                                                    </div>
+                                                `}).join('')}
+                                         </div>
+                                    </div>
+                                </div>
+
+                                <!-- Main Feed -->
+                                <div class="lg:col-span-3 space-y-6">
+                                    <h2 class="font-semibold text-xl text-zinc-900">Recommended Jobs ${app.state.searchTerm ? `(${jobs.length} found)` : ''}</h2>
+                                    
+                                    <div class="space-y-4">
+                                        ${jobs.length === 0 ? '<div class="text-center py-10 bg-white rounded-xl border border-dashed border-zinc-200 text-zinc-400">No jobs found matching your search.</div>' : ''}
+                                        ${jobs.map(job => {
+                                            const employer = Store.db.users.find(u => u.id === job.employerId);
+                                            const hasApplied = applications.find(a => a.jobId === job.id);
+                                            
+                                            return `
+                                            <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition group cursor-pointer" onclick="app.router('job-details', {id: '${job.id}'})">
+                                                <div class="flex justify-between items-start">
+                                                    <div class="flex gap-4">
+                                                        <div class="w-12 h-12 bg-zinc-900 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
+                                                            ${employer.company ? employer.company.charAt(0) : 'C'}
+                                                        </div>
+                                                        <div>
+                                                            <h3 class="font-bold text-lg text-zinc-900 group-hover:text-zinc-600 transition">${job.title}</h3>
+                                                            <p class="text-sm text-zinc-500">${employer.company} • ${job.location}</p>
+                                                        </div>
+                                                    </div>
+                                                    ${hasApplied ? 
+                                                        `<span class="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">Applied</span>` : 
+                                                        `<button class="opacity-0 group-hover:opacity-100 transition px-4 py-1.5 bg-zinc-100 text-zinc-900 text-sm font-medium rounded-lg hover:bg-zinc-200">View</button>`
+                                                    }
+                                                </div>
+                                                <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-zinc-600">
+                                                    <span class="bg-zinc-50 px-2 py-1 rounded border border-zinc-100 flex items-center gap-1"><i data-lucide="briefcase" class="w-3 h-3"></i> ${job.type}</span>
+                                                    <span class="flex items-center gap-1"><i data-lucide="dollar-sign" class="w-3 h-3"></i> ${job.salary}</span>
+                                                    <span class="text-zinc-400 text-xs ml-auto">Posted ${new Date(job.postedAt).toLocaleDateString()}</span>
+                                                </div>
+                                            </div>
+                                        `}).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                },
+
+                jobDetails(id) {
+                    const job = Store.db.jobs.find(j => j.id === id);
+                    if (!job) return '<div class="p-10 text-center">Job not found</div>';
+                    
+                    const employer = Store.db.users.find(u => u.id === job.employerId);
+                    const hasApplied = Store.currentUser && Store.getMyApplications().find(a => a.jobId === job.id);
+                    const isOwner = Store.currentUser && Store.currentUser.id === job.employerId;
+
+                    return `
+                        <div class="max-w-7xl mx-auto px-4 py-12 fade-in">
+                             <button onclick="app.router('${Store.currentUser.role === 'employer' ? 'employer-dash' : 'seeker-dash'}')" class="text-zinc-500 hover:text-zinc-900 text-sm mb-6 flex items-center gap-1">
+                                <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Dashboard
+                            </button>
+
+                            <div class="grid md:grid-cols-3 gap-8">
+                                <!-- Main Content -->
+                                <div class="md:col-span-2">
+                                    <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm mb-8">
+                                        <div class="p-8 border-b border-zinc-100">
+                                            <div class="flex items-start justify-between">
+                                                <div>
+                                                    <h1 class="text-3xl font-bold text-zinc-900 mb-2">${job.title}</h1>
+                                                    <div class="text-lg text-zinc-500 mb-6 flex items-center gap-2">
+                                                        <i data-lucide="building-2" class="w-4 h-4"></i> ${employer.company} 
+                                                        <span class="text-zinc-300">•</span>
+                                                        <i data-lucide="map-pin" class="w-4 h-4"></i> ${job.location}
+                                                    </div>
+                                                    <div class="flex gap-2">
+                                                        <span class="px-3 py-1 bg-zinc-100 rounded-full text-sm font-medium text-zinc-700">${job.type}</span>
+                                                        <span class="px-3 py-1 bg-green-50 rounded-full text-sm font-medium text-green-700">${job.salary}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="p-8">
+                                            <h3 class="font-bold text-lg text-zinc-900 mb-4">Job Description</h3>
+                                            <div class="prose prose-zinc text-zinc-600 leading-relaxed max-w-none">
+                                                ${job.description}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Sidebar -->
+                                <div class="space-y-6">
+                                    <!-- Action Card -->
+                                    <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm sticky top-24">
+                                        <h3 class="font-bold text-lg text-zinc-900 mb-4">Interested?</h3>
+                                        ${isOwner ? 
+                                            `<div class="bg-zinc-100 text-zinc-600 p-4 rounded-lg text-center text-sm font-medium">You posted this job</div>` 
+                                            : 
+                                            (hasApplied ? 
+                                                `<button disabled class="w-full py-3 bg-green-600 text-white rounded-xl font-bold opacity-90 cursor-not-allowed flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Application Sent</button>` 
+                                                : 
+                                                `<button onclick="app.handleApply('${job.id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`
+                                            )
+                                        }
+                                        <div class="mt-6 pt-6 border-t border-zinc-100 space-y-4">
+                                            <div>
+                                                <div class="text-xs text-zinc-500 uppercase tracking-wide font-semibold mb-1">Posted</div>
+                                                <div class="text-sm text-zinc-900">${new Date(job.postedAt).toLocaleDateString()}</div>
+                                            </div>
+                                            <div>
+                                                <div class="text-xs text-zinc-500 uppercase tracking-wide font-semibold mb-1">Experience Level</div>
+                                                <div class="text-sm text-zinc-900">Mid - Senior Level</div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Company Card -->
+                                    <div class="bg-zinc-900 text-white p-6 rounded-xl shadow-lg">
+                                        <div class="flex items-center gap-4 mb-4">
+                                            <div class="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center font-bold text-xl text-white">
+                                                 ${employer.company ? employer.company.charAt(0) : 'C'}
+                                            </div>
+                                            <div>
+                                                <div class="font-bold text-lg leading-tight">${employer.company}</div>
+                                                <div class="text-zinc-400 text-xs">View all jobs</div>
+                                            </div>
+                                        </div>
+                                        <p class="text-sm text-zinc-400 leading-relaxed mb-4">
+                                            ${employer.bio || 'This company has not provided a bio yet.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+            },
+
+            // --- EVENT HANDLERS ---
+            handleAuth(form, type) {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+                
+                try {
+                    if (type === 'register') {
+                        Store.register(data.name, data.email, data.password, data.role, data.extraField);
+                        this.toast('Account created successfully!');
+                    } else {
+                        Store.login(data.email, data.password);
+                        this.toast('Welcome back!');
+                    }
+                    this.router(Store.currentUser.role === 'employer' ? 'employer-dash' : 'seeker-dash');
+                } catch (err) {
+                    this.toast(err.message);
+                }
+            },
+
+            handlePostJob(form) {
+                const formData = new FormData(form);
+                const data = Object.fromEntries(formData);
+                
+                Store.postJob(data);
+                this.toast('Job Posted Successfully');
+                this.router('employer-dash');
+            },
+
+            handleApply(jobId) {
+                try {
+                    Store.applyToJob(jobId);
+                    this.toast('Application sent successfully!');
+                    this.router('seeker-dash'); // Refresh to show status
+                } catch (err) {
+                    this.toast(err.message);
+                }
+            },
+
+            handleStatusChange(appId, newStatus) {
+                Store.updateApplicationStatus(appId, newStatus);
+                this.toast(`Status updated to ${newStatus}`);
+                // Re-render to update UI if necessary, though select updates visually
+            }
+        };
+
+        // Initialize App
+        document.addEventListener('DOMContentLoaded', () => {
+            app.init();
+        });
+
+    </script>
+</body>
+</html>

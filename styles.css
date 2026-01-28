@@ -1,0 +1,45 @@
+/* Lumina Job Portal - Shared Styles */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: #FAFAFA; /* Zinc-50 */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #E4E4E7;
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #A1A1AA;
+}
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Drawer Animation */
+.drawer-enter { transform: translateX(100%); }
+.drawer-enter-active { transform: translateX(0); transition: transform 0.3s ease-out; }
+.drawer-exit { transform: translateX(0); }
+.drawer-exit-active { transform: translateX(100%); transition: transform 0.2s ease-in; }
+.drawer-overlay-enter { opacity: 0; }
+.drawer-overlay-enter-active { opacity: 1; transition: opacity 0.3s ease-out; }
+.drawer-overlay-exit { opacity: 1; }
+.drawer-overlay-exit-active { opacity: 0; transition: opacity 0.2s ease-in; }

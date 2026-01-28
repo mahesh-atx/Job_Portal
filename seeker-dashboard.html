@@ -1,0 +1,526 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Seeker Dashboard | Lumina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#F4F4F5",
+                100: "#E4E4E7",
+                900: "#18181B",
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="text-zinc-900 antialiased h-screen flex flex-col overflow-hidden"
+  >
+    <!-- Navigation -->
+    <nav
+      class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+          <div
+            class="flex items-center cursor-pointer"
+            onclick="window.location.href = 'index.html'"
+          >
+            <div class="bg-zinc-900 text-white p-1.5 rounded-lg mr-2">
+              <i data-lucide="briefcase" class="w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xl tracking-tight">Lumina</span>
+          </div>
+          <div
+            class="hidden md:flex items-center space-x-6"
+            id="nav-links"
+          ></div>
+          <div class="flex items-center space-x-4" id="auth-buttons"></div>
+          <div class="md:hidden flex items-center">
+            <button
+              onclick="
+                document
+                  .getElementById('mobile-menu')
+                  .classList.toggle('hidden')
+              "
+              class="text-zinc-500 hover:text-zinc-900"
+            >
+              <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        id="mobile-menu"
+        class="hidden md:hidden bg-white border-b border-zinc-200 p-4"
+      >
+        <div id="mobile-nav-links" class="flex flex-col space-y-3"></div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main
+      id="app-content"
+      class="flex-grow flex flex-col relative overflow-auto"
+    >
+      <!-- Content will be loaded dynamically -->
+    </main>
+
+    <!-- Footer -->
+
+    <!-- Toast Notification -->
+    <div
+      id="toast"
+      class="fixed bottom-5 right-5 bg-zinc-900 text-white px-6 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3"
+    >
+      <span id="toast-message">Notification</span>
+    </div>
+
+    <!-- Job Quick View Drawer -->
+    <div
+      id="drawer-overlay"
+      class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300"
+      onclick="closeDrawer()"
+    ></div>
+    <div
+      id="job-drawer"
+      class="fixed inset-y-0 right-0 w-full md:w-[600px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col"
+    >
+      <!-- Drawer Header -->
+      <div
+        class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-white sticky top-0 z-10"
+      >
+        <h2 class="font-bold text-lg text-zinc-900">Job Details</h2>
+        <button
+          onclick="closeDrawer()"
+          class="p-2 hover:bg-zinc-100 rounded-full transition"
+        >
+          <i data-lucide="x" class="w-5 h-5 text-zinc-500"></i>
+        </button>
+      </div>
+      <!-- Drawer Content -->
+      <div id="drawer-content" class="flex-grow overflow-y-auto p-6">
+        <!-- Dynamic Content -->
+      </div>
+      <!-- Drawer Footer -->
+      <div
+        class="p-6 border-t border-zinc-100 bg-white sticky bottom-0"
+        id="drawer-footer"
+      >
+        <!-- Dynamic Button -->
+      </div>
+    </div>
+
+    <script src="store.js"></script>
+    <script src="utils.js"></script>
+    <script>
+      let searchTerm = "";
+
+      function renderDashboard() {
+        let jobs = Store.getJobs();
+
+        // Filter jobs based on search
+        if (searchTerm) {
+          jobs = jobs.filter((j) => {
+            const employer = Store.db.users.find((u) => u.id === j.employerId);
+            const text = (
+              j.title +
+              " " +
+              j.location +
+              " " +
+              (employer?.company || "")
+            ).toLowerCase();
+            return text.includes(searchTerm.toLowerCase());
+          });
+        }
+
+        const applications = Store.getMyApplications();
+
+        // Calculate status counts
+        const statusCounts = applications.reduce((acc, curr) => {
+          acc[curr.status] = (acc[curr.status] || 0) + 1;
+          return acc;
+        }, {});
+
+        const content = document.getElementById("app-content");
+        content.innerHTML = `
+                <div class="max-w-7xl mx-auto px-4 py-10 w-full fade-in">
+                    <div class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+                        <div>
+                            <h1 class="text-3xl font-bold text-zinc-900">Hello, ${Store.currentUser.name}</h1>
+                            <p class="text-zinc-500 mt-2">Find your next opportunity or track your applications.</p>
+                            <div class="mt-4">
+                                <button onclick="window.location.href='find-job.html'" class="bg-zinc-900 text-white px-5 py-2.5 rounded-lg font-bold hover:bg-zinc-800 transition shadow-sm inline-flex items-center gap-2">
+                                    <i data-lucide="search" class="w-4 h-4"></i> Find a Job
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative w-full md:w-96">
+                            <i data-lucide="search" class="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-zinc-400"></i>
+                            <input 
+                                type="search" 
+                                id="search-input"
+                                placeholder="Search by role, company, or location..." 
+                                oninput="handleSearch(event)"
+                                value="${searchTerm}"
+                                class="w-full pl-10 pr-4 py-3 bg-white border border-zinc-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-zinc-900/20 shadow-sm"
+                            >
+                        </div>
+                    </div>
+
+                    <div class="grid lg:grid-cols-4 gap-8">
+                        <!-- Sidebar: Stats & Profile -->
+                        <div class="space-y-6">
+                            <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
+                                <div class="mb-6 pb-6 border-b border-zinc-100">
+                                    <div class="flex justify-between items-start mb-2">
+                                        <div class="text-sm text-zinc-500">Headline</div>
+                                        <button onclick="showEditProfileForm()" class="p-1 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 rounded transition" title="Edit Profile">
+                                            <i data-lucide="edit" class="w-3.5 h-3.5"></i>
+                                        </button>
+                                    </div>
+                                    <div class="font-medium text-zinc-900">${Store.currentUser.bio || "No headline set"}</div>
+                                </div>
+                                <h3 class="font-bold text-sm text-zinc-900 mb-4 uppercase tracking-wide">Application Status</h3>
+                                <div class="space-y-3">
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Applied</span>
+                                        <span class="font-bold">${statusCounts["Applied"] || 0}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-yellow-500"></span> Interview</span>
+                                        <span class="font-bold">${statusCounts["Interview"] || 0}</span>
+                                    </div>
+                                    <div class="flex justify-between items-center text-sm">
+                                        <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-green-500"></span> Hired</span>
+                                        <span class="font-bold">${statusCounts["Hired"] || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm">
+                                <h3 class="font-bold text-sm text-zinc-900 mb-4 uppercase tracking-wide">My Applications</h3>
+                                <div class="space-y-4 max-h-[400px] overflow-y-auto">
+                                    ${
+                                      applications.length === 0
+                                        ? '<p class="text-xs text-zinc-400">No applications yet.</p>'
+                                        : applications
+                                            .map((app) => {
+                                              const job = Store.db.jobs.find(
+                                                (j) => j.id === app.jobId,
+                                              );
+                                              let statusColor =
+                                                "bg-blue-100 text-blue-800";
+                                              if (app.status === "Rejected")
+                                                statusColor =
+                                                  "bg-red-100 text-red-800";
+                                              if (app.status === "Hired")
+                                                statusColor =
+                                                  "bg-green-100 text-green-800";
+
+                                              return `
+                                            <div class="border-b border-zinc-100 pb-3 last:border-0 last:pb-0">
+                                                <div class="font-semibold text-sm truncate">${job.title}</div>
+                                                <div class="flex justify-between items-center mt-2">
+                                                    <span class="text-xs text-zinc-500">${new Date(app.appliedAt).toLocaleDateString()}</span>
+                                                    <span class="text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${statusColor}">${app.status}</span>
+                                                </div>
+                                            </div>
+                                        `;
+                                            })
+                                            .join("")
+                                    }
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Feed -->
+                        <div class="lg:col-span-3 space-y-6">
+                            <h2 class="font-semibold text-xl text-zinc-900">Recommended Jobs ${searchTerm ? `(${jobs.length} found)` : ""}</h2>
+                            
+                            <div class="space-y-4">
+                                ${jobs.length === 0 ? '<div class="text-center py-10 bg-white rounded-xl border border-dashed border-zinc-200 text-zinc-400">No jobs found matching your search.</div>' : ""}
+                                ${jobs
+                                  .map((job) => {
+                                    const employer = Store.db.users.find(
+                                      (u) => u.id === job.employerId,
+                                    );
+                                    const hasApplied = applications.find(
+                                      (a) => a.jobId === job.id,
+                                    );
+
+                                    return `
+                                    <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm hover:border-zinc-300 transition group cursor-pointer" onclick="openDrawer('${job.id}')">
+                                        <div class="flex justify-between items-start">
+                                            <div class="flex gap-4">
+                                                <div class="w-12 h-12 bg-zinc-900 text-white rounded-lg flex items-center justify-center font-bold text-lg flex-shrink-0">
+                                                    ${employer.company ? employer.company.charAt(0) : "C"}
+                                                </div>
+                                                <div>
+                                                    <h3 class="font-bold text-lg text-zinc-900 group-hover:text-zinc-600 transition">${job.title}</h3>
+                                                    <p class="text-sm text-zinc-500">${employer.company} • ${job.location}</p>
+                                                </div>
+                                            </div>
+                                            ${
+                                              hasApplied
+                                                ? `<span class="text-xs font-bold text-green-600 bg-green-50 px-3 py-1 rounded-full border border-green-100">Applied</span>`
+                                                : `<button class="opacity-0 group-hover:opacity-100 transition px-4 py-1.5 bg-zinc-100 text-zinc-900 text-sm font-medium rounded-lg hover:bg-zinc-200">View</button>`
+                                            }
+                                        </div>
+                                        <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-zinc-600">
+                                            <span class="bg-zinc-50 px-2 py-1 rounded border border-zinc-100 flex items-center gap-1"><i data-lucide="briefcase" class="w-3 h-3"></i> ${job.type}</span>
+                                            <span class="flex items-center gap-1"><i data-lucide="dollar-sign" class="w-3 h-3"></i> ${job.salary}</span>
+                                            <span class="text-zinc-400 text-xs ml-auto">Posted ${new Date(job.postedAt).toLocaleDateString()}</span>
+                                        </div>
+                                    </div>
+                                `;
+                                  })
+                                  .join("")}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        Utils.initIcons();
+      }
+
+      function handleSearch(event) {
+        searchTerm = event.target.value;
+        renderDashboard();
+        // Re-focus and restore cursor position
+        const input = document.getElementById("search-input");
+        if (input) {
+          setTimeout(() => {
+            input.focus();
+            input.value = searchTerm;
+          }, 50);
+        }
+      }
+
+      function timeAgo(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const seconds = Math.floor((now - date) / 1000);
+
+        let interval = Math.floor(seconds / 31536000);
+        if (interval >= 1) return interval + "y ago";
+        interval = Math.floor(seconds / 2592000);
+        if (interval >= 1) return interval + "mo ago";
+        interval = Math.floor(seconds / 86400);
+        if (interval >= 1) return interval + "d ago";
+        interval = Math.floor(seconds / 3600);
+        if (interval >= 1) return interval + "h ago";
+        interval = Math.floor(seconds / 60);
+        if (interval >= 1) return interval + "m ago";
+        return "Just now";
+      }
+
+      function openDrawer(jobId) {
+        const job = Store.db.jobs.find((j) => j.id === jobId);
+        if (!job) return;
+        const employer = Store.db.users.find((u) => u.id === job.employerId);
+        const myApplications = Store.currentUser
+          ? Store.getMyApplications()
+          : [];
+        const hasApplied = myApplications.find((a) => a.jobId === job.id);
+        const isOwner =
+          Store.currentUser && Store.currentUser.id === job.employerId;
+
+        // Populate Content
+        const content = document.getElementById("drawer-content");
+        content.innerHTML = `
+                <!-- Header -->
+                <div class="flex items-start gap-5 mb-8">
+                    <div class="w-20 h-20 bg-white border border-zinc-200 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0">
+                        <span class="text-3xl font-bold text-zinc-900">${employer?.company ? employer.company.charAt(0) : "C"}</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-zinc-900 leading-tight mb-1">${job.title}</h1>
+                        <div class="flex items-center gap-2 text-zinc-500 font-medium">
+                            <span>${employer?.company || "Company"}</span>
+                            <span>•</span>
+                            <span class="text-zinc-400">${job.location}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Overview Grid -->
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Salary</div>
+                        <div class="font-bold text-zinc-900 flex items-center gap-2">
+                             <i data-lucide="banknote" class="w-4 h-4 text-zinc-500"></i> ${job.salary}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Job Type</div>
+                        <div class="font-bold text-zinc-900 flex items-center gap-2">
+                             <i data-lucide="briefcase" class="w-4 h-4 text-zinc-500"></i> ${job.type}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Location</div>
+                        <div class="font-bold text-zinc-900 flex items-center gap-2">
+                             <i data-lucide="map-pin" class="w-4 h-4 text-zinc-500"></i> ${job.location}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Posted</div>
+                        <div class="font-bold text-zinc-900 flex items-center gap-2">
+                             <i data-lucide="calendar" class="w-4 h-4 text-zinc-500"></i> ${timeAgo(job.postedAt || job.posted)}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-full h-px bg-zinc-100 my-8"></div>
+
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <!-- Main Description -->
+                    <div class="flex-1">
+                         <h3 class="text-lg font-bold text-zinc-900 mb-4">Job Description</h3>
+                         <div class="prose prose-zinc prose-sm max-w-none text-zinc-600">
+                            ${job.description}
+                         </div>
+                    </div>
+                </div>
+
+                 <div class="w-full h-px bg-zinc-100 my-8"></div>
+
+                <!-- Company Info Box -->
+                <div class="bg-zinc-900 rounded-xl p-6 text-white relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h4 class="font-bold text-lg mb-2">About ${employer?.company}</h4>
+                        <p class="text-zinc-400 text-sm leading-relaxed mb-4">${employer?.bio || "No company bio available."}</p>
+                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500">
+                            <span>Technology</span>
+                            <span>•</span>
+                            <span>Innovation</span>
+                        </div>
+                    </div>
+                    <!-- Decorative Circle -->
+                    <div class="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                </div>
+            `;
+
+        // Populate Footer Button
+        const footer = document.getElementById("drawer-footer");
+        if (isOwner) {
+          footer.innerHTML = `<div class="w-full py-3 bg-zinc-100 text-zinc-500 rounded-xl font-bold text-center">You posted this job</div>`;
+        } else if (hasApplied) {
+          footer.innerHTML = `<button disabled class="w-full py-3 bg-green-600 text-white rounded-xl font-bold opacity-90 cursor-not-allowed flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Application Sent</button>`;
+        } else if (!Store.currentUser) {
+          footer.innerHTML = `<button onclick="window.location.href='auth.html'" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Sign In to Apply</button>`;
+        } else {
+          footer.innerHTML = `<button onclick="handleApply('${job.id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`;
+        }
+
+        // Show Drawer
+        document.getElementById("drawer-overlay").classList.remove("hidden");
+        setTimeout(() => {
+          document
+            .getElementById("drawer-overlay")
+            .classList.remove("opacity-0");
+          document
+            .getElementById("job-drawer")
+            .classList.remove("translate-x-full");
+        }, 10);
+
+        Utils.initIcons();
+      }
+
+      function closeDrawer() {
+        document.getElementById("drawer-overlay").classList.add("opacity-0");
+        document.getElementById("job-drawer").classList.add("translate-x-full");
+        setTimeout(() => {
+          document.getElementById("drawer-overlay").classList.add("hidden");
+        }, 300);
+      }
+
+      function handleApply(jobId) {
+        try {
+          Store.applyToJob(jobId);
+          Utils.toast("Application sent successfully!");
+          openDrawer(jobId); // Re-render drawer state
+          renderDashboard(); // Re-render list
+        } catch (err) {
+          Utils.toast(err.message);
+        }
+      }
+
+      function showEditProfileForm() {
+        const user = Store.currentUser;
+        const content = document.getElementById("app-content");
+        content.innerHTML = `
+                <div class="max-w-2xl mx-auto px-8 py-6 fade-in">
+                    <h1 class="text-2xl font-bold text-zinc-900 mb-6">Edit Profile</h1>
+                    <form onsubmit="handleUpdateProfile(event)" class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm space-y-5">
+                        <div class="flex items-center gap-6 pb-6 border-b border-zinc-200">
+                            <div class="w-20 h-20 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+                                ${user.name.charAt(0).toUpperCase()}
+                            </div>
+                            <div class="flex-1">
+                                <h3 class="font-bold text-lg text-zinc-900">${user.name}</h3>
+                                <p class="text-sm text-zinc-500">${user.email}</p>
+                                <p class="text-xs text-zinc-400 mt-1">Profile photo will use your name initial</p>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Full Name*</label>
+                            <input name="name" required value="${user.name}" class="w-full px-4 py-2.5 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none" placeholder="Your name">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Email*</label>
+                            <input name="email" type="email" required value="${user.email}" class="w-full px-4 py-2.5 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none" placeholder="your@email.com">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Professional Headline*</label>
+                            <input name="bio" required value="${user.bio || ""}" class="w-full px-4 py-2.5 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none" placeholder="e.g. Senior Frontend Developer">
+                            <p class="text-xs text-zinc-500 mt-1">This appears on your profile and applications</p>
+                        </div>
+
+                        <div class="pt-4 flex gap-3">
+                            <button type="submit" class="flex-1 bg-zinc-900 text-white py-2.5 rounded-lg font-bold hover:bg-zinc-800 transition shadow-sm">
+                                Save Changes
+                            </button>
+                            <button type="button" onclick="renderDashboard()" class="flex-1 bg-white text-zinc-700 border border-zinc-300 py-2.5 rounded-lg font-medium hover:bg-zinc-50 transition">
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            `;
+        Utils.initIcons();
+      }
+
+      function handleUpdateProfile(event) {
+        event.preventDefault();
+        const data = Utils.getFormData(event.target);
+        Store.updateUserProfile(Store.currentUser.id, data);
+        Utils.toast("Profile Updated Successfully");
+        Utils.updateNav(true, "seeker-dashboard"); // Refresh nav with new name
+        renderDashboard();
+      }
+
+      // Initialize page
+      document.addEventListener("DOMContentLoaded", () => {
+        Store.init();
+        if (!Utils.requireAuth("seeker")) return;
+        Utils.updateNav(true, "seeker-dashboard");
+        renderDashboard();
+      });
+    </script>
+  </body>
+</html>

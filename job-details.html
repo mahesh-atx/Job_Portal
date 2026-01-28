@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Job Details | Lumina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: {
+                50: "#F4F4F5",
+                100: "#E4E4E7",
+                900: "#18181B",
+              },
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="text-zinc-900 antialiased h-screen flex flex-col overflow-hidden"
+  >
+    <!-- Navigation -->
+    <nav
+      class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200"
+    >
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+          <div
+            class="flex items-center cursor-pointer"
+            onclick="window.location.href = 'index.html'"
+          >
+            <div class="bg-zinc-900 text-white p-1.5 rounded-lg mr-2">
+              <i data-lucide="briefcase" class="w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xl tracking-tight">Lumina</span>
+          </div>
+          <div
+            class="hidden md:flex items-center space-x-6"
+            id="nav-links"
+          ></div>
+          <div class="flex items-center space-x-4" id="auth-buttons"></div>
+          <div class="md:hidden flex items-center">
+            <button
+              onclick="
+                document
+                  .getElementById('mobile-menu')
+                  .classList.toggle('hidden')
+              "
+              class="text-zinc-500 hover:text-zinc-900"
+            >
+              <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        id="mobile-menu"
+        class="hidden md:hidden bg-white border-b border-zinc-200 p-4"
+      >
+        <div id="mobile-nav-links" class="flex flex-col space-y-3"></div>
+      </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main
+      id="app-content"
+      class="flex-grow flex flex-col relative overflow-auto"
+    >
+      <!-- Content will be loaded dynamically -->
+    </main>
+
+    <!-- Footer -->
+
+    <!-- Toast Notification -->
+    <div
+      id="toast"
+      class="fixed bottom-5 right-5 bg-zinc-900 text-white px-6 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3"
+    >
+      <span id="toast-message">Notification</span>
+    </div>
+
+    <script src="store.js"></script>
+    <script src="utils.js"></script>
+    <script>
+      function getJobIdFromUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return params.get("id");
+      }
+
+      function renderJobDetails() {
+        const jobId = getJobIdFromUrl();
+        const job = Store.db.jobs.find((j) => j.id === jobId);
+        const content = document.getElementById("app-content");
+
+        if (!job) {
+          content.innerHTML =
+            '<div class="p-10 text-center text-zinc-500">Job not found</div>';
+          return;
+        }
+
+        const employer = Store.db.users.find((u) => u.id === job.employerId);
+        const hasApplied =
+          Store.currentUser &&
+          Store.getMyApplications().find((a) => a.jobId === job.id);
+        const isOwner =
+          Store.currentUser && Store.currentUser.id === job.employerId;
+        const dashboardPage = Store.currentUser
+          ? Store.currentUser.role === "employer"
+            ? "employer-dashboard.html"
+            : "seeker-dashboard.html"
+          : "index.html";
+
+        content.innerHTML = `
+                <div class="max-w-7xl mx-auto px-4 py-12 fade-in">
+                    <button onclick="window.location.href='${dashboardPage}'" class="text-zinc-500 hover:text-zinc-900 text-sm mb-6 flex items-center gap-1">
+                        <i data-lucide="arrow-left" class="w-4 h-4"></i> Back to Dashboard
+                    </button>
+
+                    <div class="grid md:grid-cols-3 gap-8">
+                        <!-- Main Content -->
+                        <div class="md:col-span-2">
+                            <div class="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm mb-8">
+                                <div class="p-8 border-b border-zinc-100">
+                                    <div class="flex items-start justify-between">
+                                        <div>
+                                            <h1 class="text-3xl font-bold text-zinc-900 mb-2">${job.title}</h1>
+                                            <div class="text-lg text-zinc-500 mb-6 flex items-center gap-2">
+                                                <i data-lucide="building-2" class="w-4 h-4"></i> ${employer.company} 
+                                                <span class="text-zinc-300">•</span>
+                                                <i data-lucide="map-pin" class="w-4 h-4"></i> ${job.location}
+                                            </div>
+                                            <div class="flex gap-2">
+                                                <span class="px-3 py-1 bg-zinc-100 rounded-full text-sm font-medium text-zinc-700">${job.type}</span>
+                                                <span class="px-3 py-1 bg-green-50 rounded-full text-sm font-medium text-green-700">${job.salary}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="p-8">
+                                    <h3 class="font-bold text-lg text-zinc-900 mb-4">Job Description</h3>
+                                    <div class="prose prose-zinc text-zinc-600 leading-relaxed max-w-none">
+                                        ${job.description}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar -->
+                        <div class="space-y-6">
+                            <!-- Action Card -->
+                            <div class="bg-white p-6 rounded-xl border border-zinc-200 shadow-sm sticky top-24">
+                                <h3 class="font-bold text-lg text-zinc-900 mb-4">Interested?</h3>
+                                ${
+                                  !Store.currentUser
+                                    ? `<button onclick="window.location.href='auth.html'" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Sign In to Apply</button>`
+                                    : isOwner
+                                      ? `<div class="bg-zinc-100 text-zinc-600 p-4 rounded-lg text-center text-sm font-medium">You posted this job</div>`
+                                      : hasApplied
+                                        ? `<button disabled class="w-full py-3 bg-green-600 text-white rounded-xl font-bold opacity-90 cursor-not-allowed flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Application Sent</button>`
+                                        : `<button onclick="handleApply('${job.id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`
+                                }
+                                <div class="mt-6 pt-6 border-t border-zinc-100 space-y-4">
+                                    <div>
+                                        <div class="text-xs text-zinc-500 uppercase tracking-wide font-semibold mb-1">Posted</div>
+                                        <div class="text-sm text-zinc-900">${new Date(job.postedAt).toLocaleDateString()}</div>
+                                    </div>
+                                    <div>
+                                        <div class="text-xs text-zinc-500 uppercase tracking-wide font-semibold mb-1">Experience Level</div>
+                                        <div class="text-sm text-zinc-900">Mid - Senior Level</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Company Card -->
+                            <div class="bg-zinc-900 text-white p-6 rounded-xl shadow-lg">
+                                <div class="flex items-center gap-4 mb-4">
+                                    <div class="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center font-bold text-xl text-white">
+                                        ${employer.company ? employer.company.charAt(0) : "C"}
+                                    </div>
+                                    <div>
+                                        <div class="font-bold text-lg leading-tight">${employer.company}</div>
+                                        <div class="text-zinc-400 text-xs">View all jobs</div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-zinc-400 leading-relaxed mb-4">
+                                    ${employer.bio || "This company has not provided a bio yet."}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        Utils.initIcons();
+      }
+
+      function handleApply(jobId) {
+        if (!Store.currentUser) {
+          Utils.toast("Please sign in to apply");
+          setTimeout(() => Utils.navigate("auth.html"), 1000);
+          return;
+        }
+
+        try {
+          Store.applyToJob(jobId);
+          Utils.toast("Application sent successfully!");
+          setTimeout(() => renderJobDetails(), 1000);
+        } catch (err) {
+          Utils.toast(err.message);
+        }
+      }
+
+      // Initialize page
+      document.addEventListener("DOMContentLoaded", () => {
+        Store.init();
+        Utils.updateNav(Store.currentUser !== null, "job-details");
+        renderJobDetails();
+      });
+    </script>
+  </body>
+</html>

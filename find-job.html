@@ -1,0 +1,1037 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Find Jobs | Lumina</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+      /* Range Slider Styling */
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        background: transparent;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        height: 16px;
+        width: 16px;
+        border-radius: 50%;
+        background: #18181b;
+        margin-top: -6px;
+        cursor: pointer;
+      }
+      input[type="range"]::-webkit-slider-runnable-track {
+        width: 100%;
+        height: 4px;
+        background: #e4e4e7;
+        border-radius: 2px;
+      }
+
+      /* Skeleton Shimmer */
+      @keyframes shimmer {
+        0% {
+          background-position: -200% 0;
+        }
+        100% {
+          background-position: 200% 0;
+        }
+      }
+      .skeleton {
+        background: linear-gradient(
+          90deg,
+          #f4f4f5 25%,
+          #e4e4e7 50%,
+          #f4f4f5 75%
+        );
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+        border-radius: 0.5rem;
+      }
+
+      /* Drawer Animation */
+      .drawer-enter {
+        transform: translateX(100%);
+      }
+      .drawer-enter-active {
+        transform: translateX(0);
+        transition: transform 0.3s ease-out;
+      }
+      .drawer-exit {
+        transform: translateX(0);
+      }
+      .drawer-exit-active {
+        transform: translateX(100%);
+        transition: transform 0.2s ease-in;
+      }
+      .drawer-overlay-enter {
+        opacity: 0;
+      }
+      .drawer-overlay-enter-active {
+        opacity: 1;
+        transition: opacity 0.3s ease-out;
+      }
+      .drawer-overlay-exit {
+        opacity: 1;
+      }
+      .drawer-overlay-exit-active {
+        opacity: 0;
+        transition: opacity 0.2s ease-in;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              brand: { 50: "#F4F4F5", 100: "#E4E4E7", 900: "#18181B" },
+            },
+            screens: {
+              xs: "480px",
+            },
+          },
+        },
+      };
+    </script>
+  </head>
+  <body
+    class="text-zinc-900 antialiased h-screen flex flex-col overflow-hidden"
+  >
+    <!-- Navigation -->
+    <nav
+      class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-zinc-200"
+    >
+      <div class="w-full px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16 items-center">
+          <div
+            class="flex items-center cursor-pointer"
+            onclick="window.location.href = 'index.html'"
+          >
+            <div class="bg-zinc-900 text-white p-1.5 rounded-lg mr-2">
+              <i data-lucide="briefcase" class="w-5 h-5"></i>
+            </div>
+            <span class="font-bold text-xl tracking-tight">Lumina</span>
+          </div>
+          <div
+            class="hidden md:flex items-center space-x-6"
+            id="nav-links"
+          ></div>
+          <div class="flex items-center space-x-4" id="auth-buttons"></div>
+          <div class="md:hidden flex items-center">
+            <button
+              onclick="
+                document
+                  .getElementById('mobile-menu')
+                  .classList.toggle('hidden')
+              "
+              class="text-zinc-500 hover:text-zinc-900"
+            >
+              <i data-lucide="menu" class="w-6 h-6"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        id="mobile-menu"
+        class="hidden md:hidden bg-white border-b border-zinc-200 p-4"
+      >
+        <div id="mobile-nav-links" class="flex flex-col space-y-3"></div>
+      </div>
+    </nav>
+
+    <!-- Main Wrapper (Dashboard Layout) -->
+    <div class="flex flex-grow overflow-hidden">
+      <!-- Left Sidebar (Fixed) -->
+      <aside
+        class="hidden lg:block w-72 bg-white border-r border-zinc-200 overflow-y-auto flex-shrink-0 z-30"
+      >
+        <div class="p-6 space-y-8">
+          <!-- Search within filters -->
+          <div class="relative">
+            <i
+              data-lucide="search"
+              class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400"
+            ></i>
+            <input
+              type="text"
+              placeholder="Quick filter..."
+              class="w-full pl-9 pr-4 py-2 bg-zinc-50 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-900/10"
+            />
+          </div>
+
+          <div>
+            <h3
+              class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4"
+            >
+              Job Type
+            </h3>
+            <div class="space-y-3">
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    onchange="page.handleFilter('type', 'Full-time')"
+                    class="peer appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-zinc-900 checked:border-zinc-900 transition-all"
+                  />
+                  <i
+                    data-lucide="check"
+                    class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 top-1"
+                  ></i>
+                </div>
+                <span
+                  class="text-zinc-600 group-hover:text-zinc-900 text-sm font-medium transition-colors"
+                  >Full-time</span
+                >
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    onchange="page.handleFilter('type', 'Part-time')"
+                    class="peer appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-zinc-900 checked:border-zinc-900 transition-all"
+                  />
+                  <i
+                    data-lucide="check"
+                    class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 top-1"
+                  ></i>
+                </div>
+                <span
+                  class="text-zinc-600 group-hover:text-zinc-900 text-sm font-medium transition-colors"
+                  >Part-time</span
+                >
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    onchange="page.handleFilter('type', 'Contract')"
+                    class="peer appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-zinc-900 checked:border-zinc-900 transition-all"
+                  />
+                  <i
+                    data-lucide="check"
+                    class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 top-1"
+                  ></i>
+                </div>
+                <span
+                  class="text-zinc-600 group-hover:text-zinc-900 text-sm font-medium transition-colors"
+                  >Contract</span
+                >
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative flex items-center">
+                  <input
+                    type="checkbox"
+                    onchange="page.handleFilter('type', 'Freelance')"
+                    class="peer appearance-none w-5 h-5 border border-zinc-300 rounded-md checked:bg-zinc-900 checked:border-zinc-900 transition-all"
+                  />
+                  <i
+                    data-lucide="check"
+                    class="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 left-1 top-1"
+                  ></i>
+                </div>
+                <span
+                  class="text-zinc-600 group-hover:text-zinc-900 text-sm font-medium transition-colors"
+                  >Freelance</span
+                >
+              </label>
+            </div>
+          </div>
+
+          <div class="w-full h-px bg-zinc-100 my-4"></div>
+
+          <div>
+            <h3
+              class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4"
+            >
+              Date Posted
+            </h3>
+            <div class="space-y-3">
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative flex items-center">
+                  <input
+                    type="radio"
+                    name="date"
+                    value="any"
+                    checked
+                    onchange="page.handleFilter('time', 'any')"
+                    class="peer appearance-none w-5 h-5 border border-zinc-300 rounded-full checked:border-zinc-900 checked:border-4 transition-all"
+                  />
+                </div>
+                <span
+                  class="text-zinc-600 group-hover:text-zinc-900 text-sm font-medium transition-colors"
+                  >Any time</span
+                >
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative flex items-center">
+                  <input
+                    type="radio"
+                    name="date"
+                    value="24h"
+                    onchange="page.handleFilter('time', '24h')"
+                    class="peer appearance-none w-5 h-5 border border-zinc-300 rounded-full checked:border-zinc-900 checked:border-4 transition-all"
+                  />
+                </div>
+                <span
+                  class="text-zinc-600 group-hover:text-zinc-900 text-sm font-medium transition-colors"
+                  >Past 24 hours</span
+                >
+              </label>
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <div class="relative flex items-center">
+                  <input
+                    type="radio"
+                    name="date"
+                    value="7d"
+                    onchange="page.handleFilter('time', '7d')"
+                    class="peer appearance-none w-5 h-5 border border-zinc-300 rounded-full checked:border-zinc-900 checked:border-4 transition-all"
+                  />
+                </div>
+                <span
+                  class="text-zinc-600 group-hover:text-zinc-900 text-sm font-medium transition-colors"
+                  >Past week</span
+                >
+              </label>
+            </div>
+          </div>
+
+          <div class="w-full h-px bg-zinc-100 my-4"></div>
+
+          <div>
+            <h3
+              class="text-xs font-bold text-zinc-500 uppercase tracking-wider mb-4"
+            >
+              Salary Range
+            </h3>
+            <div class="px-2">
+              <input
+                type="range"
+                class="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-900"
+              />
+              <div
+                class="flex justify-between text-xs font-bold text-zinc-400 mt-3"
+              >
+                <span>$30k</span>
+                <span>$200k+</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right Content Area (Scrollable) -->
+      <main
+        class="flex-1 flex flex-col overflow-y-auto relative bg-zinc-50/30"
+        id="main-content"
+      >
+        <!-- Hero Section -->
+        <div class="bg-white border-b border-zinc-200 py-12 px-6 lg:px-12">
+          <h1
+            class="text-3xl lg:text-4xl font-extrabold text-zinc-900 mb-4 tracking-tight"
+          >
+            Find your dream job
+          </h1>
+          <p class="text-lg text-zinc-500 max-w-2xl">
+            Discover thousands of job opportunities with all the information you
+            need. Its your future. Come find it. Manage all your job application
+            from start to finish.
+          </p>
+        </div>
+
+        <!-- Sticky Search Bar -->
+        <div
+          class="bg-white border-b border-zinc-200 sticky top-0 z-20 py-4 px-6 lg:px-12 shadow-sm"
+        >
+          <div class="flex flex-col md:flex-row gap-3">
+            <div class="flex-1 relative">
+              <i
+                data-lucide="search"
+                class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
+              ></i>
+              <input
+                id="search-keyword"
+                type="text"
+                placeholder="Job title or keyword"
+                class="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none"
+                oninput="page.handleSearch('keyword', event)"
+              />
+            </div>
+            <div class="flex-1 relative">
+              <i
+                data-lucide="map-pin"
+                class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400"
+              ></i>
+              <input
+                id="search-location"
+                type="text"
+                placeholder="City, state, or remote"
+                class="w-full pl-10 pr-4 py-3 bg-zinc-50 border border-zinc-200 rounded-lg focus:ring-2 focus:ring-zinc-900/20 focus:border-zinc-900 outline-none"
+                oninput="page.handleSearch('location', event)"
+              />
+            </div>
+            <div class="flex gap-2">
+              <button
+                onclick="page.openFilterDrawer()"
+                class="lg:hidden flex-1 bg-white text-zinc-900 border border-zinc-300 px-6 py-3 rounded-lg font-bold hover:bg-zinc-50 transition flex items-center justify-center gap-2"
+              >
+                <i data-lucide="sliders-horizontal" class="w-4 h-4"></i> Filters
+              </button>
+              <button
+                onclick="page.renderJobs()"
+                class="flex-1 lg:flex-none bg-zinc-900 text-white px-8 py-3 rounded-lg font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200/50"
+              >
+                Find Jobs
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Job Feed -->
+        <div class="flex-grow w-full px-6 lg:px-12 py-8 space-y-6">
+          <div class="flex justify-between items-center mb-2">
+            <h2 class="font-bold text-lg text-zinc-900" id="job-count-header">
+              Loading...
+            </h2>
+            <div class="text-sm text-zinc-500">
+              Sort by:
+              <span
+                class="font-bold text-zinc-900 cursor-pointer hover:underline"
+                >Newest</span
+              >
+            </div>
+          </div>
+
+          <div id="jobs-container" class="space-y-4 pb-12">
+            <!-- Jobs will be injected here -->
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Mobile Filter Drawer -->
+    <div
+      id="filter-drawer-overlay"
+      class="fixed inset-0 bg-black/50 z-[60] hidden opacity-0 transition-opacity duration-300"
+      onclick="page.closeFilterDrawer()"
+    ></div>
+    <div
+      id="filter-drawer"
+      class="fixed inset-y-0 left-0 w-full xs:w-[320px] bg-white shadow-2xl z-[60] transform -translate-x-full transition-transform duration-300 flex flex-col"
+    >
+      <div
+        class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-white sticky top-0 z-10"
+      >
+        <h2 class="font-bold text-lg text-zinc-900">Filters</h2>
+        <button
+          onclick="page.closeFilterDrawer()"
+          class="p-2 hover:bg-zinc-100 rounded-full transition"
+        >
+          <i data-lucide="x" class="w-5 h-5 text-zinc-500"></i>
+        </button>
+      </div>
+      <div class="flex-grow overflow-y-auto p-6 space-y-8">
+        <!-- Content duplicated from sidebar for mobile -->
+        <div>
+          <h3 class="font-bold text-zinc-900 mb-4">Job Type</h3>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                onchange="page.handleFilter('type', 'Full-time')"
+                class="w-4 h-4 border-2 border-zinc-300 rounded accent-zinc-900 mobile-filter-type"
+                value="Full-time"
+              />
+              <span class="text-zinc-600">Full-time</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                onchange="page.handleFilter('type', 'Part-time')"
+                class="w-4 h-4 border-2 border-zinc-300 rounded accent-zinc-900 mobile-filter-type"
+                value="Part-time"
+              />
+              <span class="text-zinc-600">Part-time</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                onchange="page.handleFilter('type', 'Contract')"
+                class="w-4 h-4 border-2 border-zinc-300 rounded accent-zinc-900 mobile-filter-type"
+                value="Contract"
+              />
+              <span class="text-zinc-600">Contract</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer group">
+              <input
+                type="checkbox"
+                onchange="page.handleFilter('type', 'Freelance')"
+                class="w-4 h-4 border-2 border-zinc-300 rounded accent-zinc-900 mobile-filter-type"
+                value="Freelance"
+              />
+              <span class="text-zinc-600">Freelance</span>
+            </label>
+          </div>
+        </div>
+        <div>
+          <h3 class="font-bold text-zinc-900 mb-4">Date Posted</h3>
+          <div class="space-y-2">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="mobile-date"
+                value="any"
+                checked
+                onchange="page.handleFilter('time', 'any')"
+                class="accent-zinc-900 mobile-filter-time"
+              />
+              <span class="text-zinc-600 text-sm">Any time</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="mobile-date"
+                value="24h"
+                onchange="page.handleFilter('time', '24h')"
+                class="accent-zinc-900 mobile-filter-time"
+              />
+              <span class="text-zinc-600 text-sm">Past 24 hours</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="mobile-date"
+                value="7d"
+                onchange="page.handleFilter('time', '7d')"
+                class="accent-zinc-900 mobile-filter-time"
+              />
+              <span class="text-zinc-600 text-sm">Past week</span>
+            </label>
+          </div>
+        </div>
+        <div>
+          <h3 class="font-bold text-zinc-900 mb-4">Salary Range</h3>
+          <input
+            type="range"
+            class="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer"
+          />
+          <div class="flex justify-between text-xs text-zinc-500 mt-2">
+            <span>$30k</span>
+            <span>$200k+</span>
+          </div>
+        </div>
+      </div>
+      <div class="p-6 border-t border-zinc-100 bg-white sticky bottom-0">
+        <button
+          onclick="page.closeFilterDrawer()"
+          class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition"
+        >
+          Show Results
+        </button>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div
+      id="toast"
+      class="fixed bottom-5 right-5 bg-zinc-900 text-white px-6 py-3 rounded-lg shadow-xl transform translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center gap-3"
+    >
+      <span id="toast-message">Notification</span>
+    </div>
+
+    <!-- Job Quick View Drawer -->
+    <div
+      id="drawer-overlay"
+      class="fixed inset-0 bg-black/50 z-50 hidden opacity-0 transition-opacity duration-300"
+      onclick="page.closeDrawer()"
+    ></div>
+    <div
+      id="job-drawer"
+      class="fixed inset-y-0 right-0 w-full md:w-[600px] bg-white shadow-2xl z-50 transform translate-x-full transition-transform duration-300 flex flex-col"
+    >
+      <!-- Drawer Header -->
+      <div
+        class="px-6 py-4 border-b border-zinc-100 flex items-center justify-between bg-white sticky top-0 z-10"
+      >
+        <h2 class="font-bold text-lg text-zinc-900">Job Details</h2>
+        <button
+          onclick="page.closeDrawer()"
+          class="p-2 hover:bg-zinc-100 rounded-full transition"
+        >
+          <i data-lucide="x" class="w-5 h-5 text-zinc-500"></i>
+        </button>
+      </div>
+      <!-- Drawer Content -->
+      <div id="drawer-content" class="flex-grow overflow-y-auto p-6">
+        <!-- Dynamic Content -->
+      </div>
+      <!-- Drawer Footer -->
+      <div
+        class="p-6 border-t border-zinc-100 bg-white sticky bottom-0"
+        id="drawer-footer"
+      >
+        <!-- Dynamic Button -->
+      </div>
+    </div>
+
+    <script src="store.js"></script>
+    <script src="utils.js"></script>
+    <script>
+      const page = {
+        state: {
+          searchTerm: "",
+          locationTerm: "",
+          filters: {
+            type: [],
+            time: "any",
+          },
+          isLoading: false,
+        },
+
+        init() {
+          Store.init();
+          Utils.updateNav(Store.currentUser !== null, "find-job");
+          this.triggerLoading(); // Start with loading state
+          Utils.initIcons();
+        },
+
+        triggerLoading() {
+          this.state.isLoading = true;
+          this.renderJobs();
+          // Simulate network delay for premium feel
+          setTimeout(() => {
+            this.state.isLoading = false;
+            this.renderJobs();
+          }, 800);
+        },
+
+        handleSearch(type, e) {
+          if (type === "keyword")
+            this.state.searchTerm = e.target.value.toLowerCase();
+          if (type === "location")
+            this.state.locationTerm = e.target.value.toLowerCase();
+          this.triggerLoading(); // Show skeleton on search
+        },
+
+        handleFilter(type, value) {
+          if (type === "type") {
+            const idx = this.state.filters.type.indexOf(value);
+            if (idx > -1) this.state.filters.type.splice(idx, 1);
+            else this.state.filters.type.push(value);
+          } else if (type === "time") {
+            this.state.filters.time = value;
+          }
+          this.triggerLoading(); // Show skeleton on filter change
+        },
+
+        timeAgo(dateString) {
+          const date = new Date(dateString);
+          const now = new Date();
+          const seconds = Math.floor((now - date) / 1000);
+
+          let interval = Math.floor(seconds / 31536000);
+          if (interval >= 1) return interval + "y ago";
+          interval = Math.floor(seconds / 2592000);
+          if (interval >= 1) return interval + "mo ago";
+          interval = Math.floor(seconds / 86400);
+          if (interval >= 1) return interval + "d ago";
+          interval = Math.floor(seconds / 3600);
+          if (interval >= 1) return interval + "h ago";
+          interval = Math.floor(seconds / 60);
+          if (interval >= 1) return interval + "m ago";
+          return "Just now";
+        },
+
+        renderSkeletons() {
+          return Array(5)
+            .fill(0)
+            .map(
+              () => `
+                <div class="bg-white p-6 rounded-xl border border-zinc-200 flex flex-col sm:flex-row gap-4 sm:items-start">
+                    <div class="w-14 h-14 skeleton rounded-lg flex-shrink-0"></div>
+                    <div class="flex-grow space-y-3">
+                        <div class="flex justify-between">
+                            <div class="h-6 w-1/3 skeleton"></div>
+                            <div class="h-6 w-6 skeleton rounded-full"></div>
+                        </div>
+                        <div class="h-4 w-1/4 skeleton"></div>
+                        <div class="flex gap-4 mt-4">
+                            <div class="h-4 w-20 skeleton"></div>
+                            <div class="h-4 w-20 skeleton"></div>
+                            <div class="h-4 w-20 skeleton"></div>
+                        </div>
+                    </div>
+                </div>
+            `,
+            )
+            .join("");
+        },
+
+        openDrawer(jobId) {
+          const job = Store.db.jobs.find((j) => j.id === jobId);
+          if (!job) return;
+          const employer = Store.db.users.find((u) => u.id === job.employerId);
+          const myApplications = Store.currentUser
+            ? Store.getMyApplications()
+            : [];
+          const hasApplied = myApplications.find((a) => a.jobId === job.id);
+          const isOwner =
+            Store.currentUser && Store.currentUser.id === job.employerId;
+
+          // Populate Content
+          const content = document.getElementById("drawer-content");
+          content.innerHTML = `
+                <!-- Header -->
+                <div class="flex items-start gap-5 mb-8">
+                    <div class="w-20 h-20 bg-white border border-zinc-200 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0">
+                        <span class="text-3xl font-bold text-zinc-900">${employer?.company ? employer.company.charAt(0) : "C"}</span>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold text-zinc-900 leading-tight mb-1">${job.title}</h1>
+                        <div class="flex items-center gap-2 text-zinc-500 font-medium">
+                            <span>${employer?.company || "Company"}</span>
+                            <span>•</span>
+                            <span class="text-zinc-400">${job.location}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Job Overview Grid -->
+                <div class="grid grid-cols-2 gap-4 mb-8">
+                    <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Salary</div>
+                        <div class="font-bold text-zinc-900 flex items-center gap-2">
+                             <i data-lucide="banknote" class="w-4 h-4 text-zinc-500"></i> ${job.salary}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Job Type</div>
+                        <div class="font-bold text-zinc-900 flex items-center gap-2">
+                             <i data-lucide="briefcase" class="w-4 h-4 text-zinc-500"></i> ${job.type}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Location</div>
+                        <div class="font-bold text-zinc-900 flex items-center gap-2">
+                             <i data-lucide="map-pin" class="w-4 h-4 text-zinc-500"></i> ${job.location}
+                        </div>
+                    </div>
+                    <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
+                        <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Posted</div>
+                        <div class="font-bold text-zinc-900 flex items-center gap-2">
+                             <i data-lucide="calendar" class="w-4 h-4 text-zinc-500"></i> ${this.timeAgo(job.postedAt || job.posted)}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="w-full h-px bg-zinc-100 my-8"></div>
+
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <!-- Main Description -->
+                    <div class="flex-1">
+                         <h3 class="text-lg font-bold text-zinc-900 mb-4">Job Description</h3>
+                         <div class="prose prose-zinc prose-sm max-w-none text-zinc-600">
+                            ${job.description}
+                         </div>
+                    </div>
+                </div>
+
+                 <div class="w-full h-px bg-zinc-100 my-8"></div>
+
+                <!-- Company Info Box -->
+                <div class="bg-zinc-900 rounded-xl p-6 text-white relative overflow-hidden">
+                    <div class="relative z-10">
+                        <h4 class="font-bold text-lg mb-2">About ${employer?.company}</h4>
+                        <p class="text-zinc-400 text-sm leading-relaxed mb-4">${employer?.bio || "No company bio available."}</p>
+                        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500">
+                            <span>Technology</span>
+                            <span>•</span>
+                            <span>Innovation</span>
+                        </div>
+                    </div>
+                    <!-- Decorative Circle -->
+                    <div class="absolute -top-12 -right-12 w-48 h-48 bg-white/5 rounded-full blur-3xl"></div>
+                </div>
+            `;
+
+          // Populate Footer Button
+          const footer = document.getElementById("drawer-footer");
+          if (isOwner) {
+            footer.innerHTML = `<div class="w-full py-3 bg-zinc-100 text-zinc-500 rounded-xl font-bold text-center">You posted this job</div>`;
+          } else if (hasApplied) {
+            footer.innerHTML = `<button disabled class="w-full py-3 bg-green-600 text-white rounded-xl font-bold opacity-90 cursor-not-allowed flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Application Sent</button>`;
+          } else if (!Store.currentUser) {
+            footer.innerHTML = `<button onclick="window.location.href='auth.html'" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Sign In to Apply</button>`;
+          } else {
+            footer.innerHTML = `<button onclick="page.handleApply('${job.id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`;
+          }
+
+          // Show Drawer
+          document.getElementById("drawer-overlay").classList.remove("hidden");
+          // Small delay to allow display:block to apply before opacity transition
+          setTimeout(() => {
+            document
+              .getElementById("drawer-overlay")
+              .classList.remove("opacity-0");
+            document
+              .getElementById("job-drawer")
+              .classList.remove("translate-x-full");
+          }, 10);
+
+          Utils.initIcons();
+        },
+
+        closeDrawer() {
+          document.getElementById("drawer-overlay").classList.add("opacity-0");
+          document
+            .getElementById("job-drawer")
+            .classList.add("translate-x-full");
+          setTimeout(() => {
+            document.getElementById("drawer-overlay").classList.add("hidden");
+          }, 300);
+        },
+
+        handleApply(jobId) {
+          try {
+            Store.applyToJob(jobId);
+            Utils.toast("Application sent successfully!");
+            this.openDrawer(jobId); // Re-render drawer state
+          } catch (err) {
+            Utils.toast(err.message);
+          }
+        },
+
+        clearSearch(type) {
+          if (type === "keyword") {
+            this.state.searchTerm = "";
+            document.getElementById("search-keyword").value = "";
+          }
+          if (type === "location") {
+            this.state.locationTerm = "";
+            document.getElementById("search-location").value = "";
+          }
+          this.triggerLoading();
+        },
+
+        resetFilters() {
+          this.state.searchTerm = "";
+          this.state.locationTerm = "";
+          this.state.filters.type = [];
+          this.state.filters.time = "any";
+
+          // Reset UI inputs
+          document.getElementById("search-keyword").value = "";
+          document.getElementById("search-location").value = "";
+          document
+            .querySelectorAll('input[type="checkbox"]')
+            .forEach((el) => (el.checked = false));
+          document.querySelector('input[value="any"]').checked = true;
+
+          this.triggerLoading();
+        },
+
+        openFilterDrawer() {
+          document
+            .getElementById("filter-drawer-overlay")
+            .classList.remove("hidden");
+          setTimeout(() => {
+            document
+              .getElementById("filter-drawer-overlay")
+              .classList.remove("opacity-0");
+            document
+              .getElementById("filter-drawer")
+              .classList.remove("-translate-x-full");
+          }, 10);
+        },
+
+        closeFilterDrawer() {
+          document
+            .getElementById("filter-drawer-overlay")
+            .classList.add("opacity-0");
+          document
+            .getElementById("filter-drawer")
+            .classList.add("-translate-x-full");
+          setTimeout(() => {
+            document
+              .getElementById("filter-drawer-overlay")
+              .classList.add("hidden");
+          }, 300);
+        },
+
+        renderJobs() {
+          try {
+            const container = document.getElementById("jobs-container");
+            const countEl = document.getElementById("job-count-header");
+
+            if (!container || !countEl) {
+              console.error("DOM elements missing");
+              return;
+            }
+
+            if (this.state.isLoading) {
+              container.innerHTML = this.renderSkeletons();
+              countEl.innerText = "Finding relevant jobs...";
+              return;
+            }
+
+            let jobs = [];
+            try {
+              const rawJobs = Store.getJobs() || [];
+              // Enrich jobs with company data
+              jobs = rawJobs.map((job) => {
+                const employer = Store.db.users.find(
+                  (u) => u.id === job.employerId,
+                );
+                return {
+                  ...job,
+                  company: employer
+                    ? employer.company || employer.name
+                    : "Unknown Company",
+                };
+              });
+            } catch (e) {
+              console.error("Store error:", e);
+              // Attempt re-init if store fails
+              Store.init();
+              const rawJobs = Store.getJobs() || [];
+              jobs = rawJobs.map((job) => {
+                const employer = Store.db.users.find(
+                  (u) => u.id === job.employerId,
+                );
+                return {
+                  ...job,
+                  company: employer
+                    ? employer.company || employer.name
+                    : "Unknown Company",
+                };
+              });
+            }
+
+            // Filtering
+            if (this.state.searchTerm) {
+              jobs = jobs.filter(
+                (j) =>
+                  j.title.toLowerCase().includes(this.state.searchTerm) ||
+                  j.company.toLowerCase().includes(this.state.searchTerm),
+              );
+            }
+            if (this.state.locationTerm) {
+              jobs = jobs.filter((j) =>
+                j.location.toLowerCase().includes(this.state.locationTerm),
+              );
+            }
+            if (this.state.filters.type.length > 0) {
+              jobs = jobs.filter((j) =>
+                this.state.filters.type.includes(j.type),
+              );
+            }
+            if (this.state.filters.time !== "any") {
+              const now = new Date();
+              jobs = jobs.filter((j) => {
+                const jobDate = new Date(j.postedAt || j.posted); // Handle both key names if inconsistent
+                if (isNaN(jobDate.getTime())) return true; // Keep if date invalid
+                const hours = (now - jobDate) / (1000 * 60 * 60);
+                if (this.state.filters.time === "24h") return hours <= 24;
+                if (this.state.filters.time === "7d") return hours <= 24 * 7;
+                return true;
+              });
+            }
+
+            const filtered = jobs;
+
+            // Active Tags Logic
+            let activeTagsHTML = "";
+            if (this.state.filters.type.length > 0) {
+              this.state.filters.type.forEach((type) => {
+                activeTagsHTML += `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-zinc-900 text-white">
+                        ${type} <i data-lucide="x" class="w-3 h-3 cursor-pointer" onclick="page.handleFilter('type', '${type}'); document.querySelector('input[value=\\'${type}\\']').checked = false;"></i>
+                      </span>`;
+              });
+            }
+            if (this.state.filters.time !== "any") {
+              let label =
+                this.state.filters.time === "24h" ? "Past 24h" : "Past Week";
+              activeTagsHTML += `<span class="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-zinc-900 text-white">
+                        ${label} <i data-lucide="x" class="w-3 h-3 cursor-pointer" onclick="page.handleFilter('time', 'any'); document.querySelector('input[value=\\'any\\']').checked = true;"></i>
+                      </span>`;
+            }
+
+            // Update Header
+            countEl.innerHTML = `
+                <div class="flex flex-col gap-2">
+                    <div>${filtered.length} Job${filtered.length !== 1 ? "s" : ""} Found</div>
+                    ${activeTagsHTML ? `<div class="flex flex-wrap gap-2 mt-1">${activeTagsHTML}</div>` : ""}
+                </div>
+              `;
+
+            // Empty State
+            if (filtered.length === 0) {
+              container.innerHTML = `
+                        <div class="flex flex-col items-center justify-center py-16 text-center">
+                            <div class="w-24 h-24 bg-zinc-50 rounded-full flex items-center justify-center mb-6">
+                                <i data-lucide="search-x" class="w-10 h-10 text-zinc-300"></i>
+                            </div>
+                            <h3 class="text-xl font-bold text-zinc-900 mb-2">No jobs found</h3>
+                            <p class="text-zinc-500 max-w-sm mx-auto mb-8">We couldn't find any jobs matching your current filters. Try adjusting your search or clearing filters.</p>
+                            <button onclick="page.resetFilters()" class="px-6 py-2 bg-white border border-zinc-200 text-zinc-900 font-bold rounded-lg hover:bg-zinc-50 transition">
+                                Clear all filters
+                            </button>
+                        </div>
+                    `;
+              Utils.initIcons();
+              return;
+            }
+
+            container.innerHTML = filtered
+              .map(
+                (job) => `
+                    <div onclick="page.openDrawer('${job.id}')" class="group bg-white p-6 rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-lg transition-all cursor-pointer relative overflow-hidden">
+                        <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
+                            <div class="w-14 h-14 bg-zinc-100 rounded-lg flex items-center justify-center text-xl font-bold text-zinc-900 group-hover:scale-105 transition-transform flex-shrink-0">
+                                ${job.company.charAt(0)}
+                            </div>
+                            <div class="flex-grow">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <h3 class="font-bold text-lg text-zinc-900 group-hover:text-blue-600 transition-colors">${job.title}</h3>
+                                        <p class="text-zinc-500 font-medium">${job.company}</p>
+                                    </div>
+                                    <button class="p-2 hover:bg-zinc-50 rounded-full transition text-zinc-400 hover:text-zinc-900">
+                                        <i data-lucide="bookmark" class="w-5 h-5"></i>
+                                    </button>
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-2 my-3">
+                                    <span class="px-3 py-1 bg-zinc-50 rounded-full text-xs font-medium text-zinc-600 border border-zinc-100">${job.type}</span>
+                                    <span class="px-3 py-1 bg-zinc-50 rounded-full text-xs font-medium text-zinc-600 border border-zinc-100">${job.location}</span>
+                                    <span class="px-3 py-1 bg-zinc-50 rounded-full text-xs font-medium text-zinc-600 border border-zinc-100">${job.salary}</span>
+                                </div>
+    
+                                <div class="flex items-center gap-4 text-sm text-zinc-400 mt-2">
+                                    <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ${this.timeAgo(job.postedAt || job.posted)}</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="users" class="w-3 h-3"></i> ${Math.floor(Math.random() * 50) + 5} applicants</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+              )
+              .join("");
+
+            Utils.initIcons();
+          } catch (err) {
+            console.error("Render Error:", err);
+            document.getElementById("jobs-container").innerHTML = `
+                <div class="p-4 bg-red-50 text-red-600 rounded-lg">
+                    <strong>Error loading jobs:</strong> ${err.message}
+                </div>
+              `;
+          }
+        },
+      };
+
+      page.init();
+    </script>
+  </body>
+</html>
