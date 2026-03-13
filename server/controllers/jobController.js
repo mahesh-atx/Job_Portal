@@ -1,4 +1,20 @@
 const Job = require('../models/Job');
+const Application = require('../models/Application');
+
+// Simple HTML sanitizer - strips dangerous tags and event handlers
+function sanitizeHTML(html) {
+  if (!html) return '';
+  return html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+    .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+    .replace(/<embed[^>]*>/gi, '')
+    .replace(/<link[^>]*>/gi, '')
+    .replace(/on\w+\s*=\s*"[^"]*"/gi, '')
+    .replace(/on\w+\s*=\s*'[^']*'/gi, '')
+    .replace(/on\w+\s*=[^\s>]*/gi, '')
+    .replace(/javascript\s*:/gi, '');
+}
 
 // @desc    Get all jobs
 // @route   GET /api/jobs
@@ -31,7 +47,22 @@ const getAllJobs = async (req, res) => {
       .populate('employerId', 'name company email')
       .sort({ postedAt: -1 });
     
-    res.json(jobs);
+    // Add application count for each job
+    const jobIds = jobs.map(j => j._id);
+    const counts = await Application.aggregate([
+      { $match: { jobId: { $in: jobIds } } },
+      { $group: { _id: '$jobId', count: { $sum: 1 } } }
+    ]);
+    const countMap = {};
+    counts.forEach(c => { countMap[c._id.toString()] = c.count; });
+
+    const jobsWithCounts = jobs.map(j => {
+      const obj = j.toObject();
+      obj.applicationCount = countMap[j._id.toString()] || 0;
+      return obj;
+    });
+
+    res.json(jobsWithCounts);
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -65,7 +96,7 @@ const createJob = async (req, res) => {
     const { title, type, salary, location, description } = req.body;
     
     // Ensure description handles newlines if plain text
-    let desc = description;
+    let desc = sanitizeHTML(description);
     if (!desc.includes('<p>')) {
       desc = desc.split('\n').map(line => line.trim() ? `<p class="mb-2">${line}</p>` : '').join('');
     }
@@ -108,7 +139,7 @@ const updateJob = async (req, res) => {
     const { title, type, salary, location, description } = req.body;
     
     // Ensure description handles newlines if plain text
-    let desc = description;
+    let desc = sanitizeHTML(description);
     if (!desc.includes('<p>')) {
       desc = desc.split('\n').map(line => line.trim() ? `<p class="mb-2">${line}</p>` : '').join('');
     }

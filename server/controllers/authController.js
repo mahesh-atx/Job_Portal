@@ -14,13 +14,10 @@ const generateToken = (id) => {
 const register = async (req, res) => {
   try {
     const { name, email, password, role, company, bio } = req.body;
-    console.log('[REGISTER] Registration attempt for:', email);
-    console.log('[REGISTER] Password received (length):', password ? password.length : 0);
 
     // Check if user exists
     const userExists = await User.findOne({ email });
     if (userExists) {
-      console.log('[REGISTER] User already exists');
       return res.status(400).json({ message: 'User already exists with this email' });
     }
 
@@ -33,9 +30,6 @@ const register = async (req, res) => {
       company: role === 'employer' ? company : null,
       bio: bio || (role === 'employer' ? 'Hiring Manager' : '')
     });
-    
-    console.log('[REGISTER] User created successfully');
-    console.log('[REGISTER] Password was hashed:', user.password.startsWith('$2'));
 
     if (user) {
       res.status(201).json({
@@ -49,7 +43,7 @@ const register = async (req, res) => {
       });
     }
   } catch (error) {
-    console.error('[REGISTER ERROR]', error);
+    console.error('Registration error:', error.message);
     res.status(500).json({ message: 'Server error during registration', error: error.message });
   }
 };
@@ -60,22 +54,17 @@ const register = async (req, res) => {
 const login = async (req, res) => {
   try {
     const { email, password } = req.body;
-    console.log('[LOGIN] Attempting login for email:', email);
 
     // Check for user
     const user = await User.findOne({ email });
-    console.log('[LOGIN] User found:', user ? 'YES' : 'NO');
     
     if (!user) {
-      console.log('[LOGIN] User not found in database');
       return res.status(401).json({ message: 'Invalid email or password' });
     }
 
     const passwordMatch = await user.comparePassword(password);
-    console.log('[LOGIN] Password match:', passwordMatch);
 
     if (passwordMatch) {
-      console.log('[LOGIN] Login successful for user:', user.email);
       res.json({
         _id: user._id,
         name: user.name,
@@ -88,11 +77,10 @@ const login = async (req, res) => {
         token: generateToken(user._id)
       });
     } else {
-      console.log('[LOGIN] Password mismatch');
       res.status(401).json({ message: 'Invalid email or password' });
     }
   } catch (error) {
-    console.error('[LOGIN ERROR]', error);
+    console.error('Login error:', error.message);
     res.status(500).json({ message: 'Server error during login', error: error.message });
   }
 };

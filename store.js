@@ -145,14 +145,6 @@ const Store = {
         }
     },
 
-    async postJob(jobData) {
-        try {
-            const job = await API.jobs.create(jobData);
-            return job;
-        } catch (error) {
-            throw new Error(error.message || 'Failed to post job');
-        }
-    },
 
     async deleteJob(jobId) {
         try {
@@ -171,15 +163,6 @@ const Store = {
         }
     },
 
-    async getJobById(jobId) {
-        try {
-            const job = await API.jobs.getById(jobId);
-            return job;
-        } catch (error) {
-            console.error('Failed to fetch job:', error);
-            return null;
-        }
-    },
 
     async updateUserProfile(userId, updates) {
         try {

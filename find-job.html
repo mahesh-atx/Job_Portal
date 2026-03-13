@@ -308,13 +308,18 @@
             <div class="px-2">
               <input
                 type="range"
+                id="salary-slider"
+                min="30"
+                max="200"
+                value="200"
+                oninput="page.handleFilter('salary', this.value)"
                 class="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer accent-zinc-900"
               />
               <div
                 class="flex justify-between text-xs font-bold text-zinc-400 mt-3"
               >
                 <span>$30k</span>
-                <span>$200k+</span>
+                <span id="salary-display">$200k+</span>
               </div>
             </div>
           </div>
@@ -514,11 +519,16 @@
           <h3 class="font-bold text-zinc-900 mb-4">Salary Range</h3>
           <input
             type="range"
+            id="mobile-salary-slider"
+            min="30"
+            max="200"
+            value="200"
+            oninput="page.handleFilter('salary', this.value)"
             class="w-full h-1 bg-zinc-200 rounded-lg appearance-none cursor-pointer"
           />
           <div class="flex justify-between text-xs text-zinc-500 mt-2">
             <span>$30k</span>
-            <span>$200k+</span>
+            <span id="mobile-salary-display">$200k+</span>
           </div>
         </div>
       </div>
@@ -586,6 +596,7 @@
           filters: {
             type: [],
             time: "any",
+            salary: 200,
           },
           isLoading: false,
         },
@@ -622,6 +633,18 @@
             else this.state.filters.type.push(value);
           } else if (type === "time") {
             this.state.filters.time = value;
+          } else if (type === "salary") {
+            this.state.filters.salary = parseInt(value);
+            const label = value >= 200 ? '$200k+' : `$${value}k`;
+            const el = document.getElementById('salary-display');
+            const el2 = document.getElementById('mobile-salary-display');
+            if (el) el.textContent = label;
+            if (el2) el2.textContent = label;
+            // sync sliders
+            const s1 = document.getElementById('salary-slider');
+            const s2 = document.getElementById('mobile-salary-slider');
+            if (s1) s1.value = value;
+            if (s2) s2.value = value;
           }
           this.triggerLoading(); // Show skeleton on filter change
         },
@@ -826,6 +849,7 @@
           this.state.locationTerm = "";
           this.state.filters.type = [];
           this.state.filters.time = "any";
+          this.state.filters.salary = 200;
 
           // Reset UI inputs
           document.getElementById("search-keyword").value = "";
@@ -834,6 +858,14 @@
             .querySelectorAll('input[type="checkbox"]')
             .forEach((el) => (el.checked = false));
           document.querySelector('input[value="any"]').checked = true;
+          const s1 = document.getElementById('salary-slider');
+          const s2 = document.getElementById('mobile-salary-slider');
+          if (s1) s1.value = 200;
+          if (s2) s2.value = 200;
+          const el = document.getElementById('salary-display');
+          const el2 = document.getElementById('mobile-salary-display');
+          if (el) el.textContent = '$200k+';
+          if (el2) el2.textContent = '$200k+';
 
           this.triggerLoading();
         },
@@ -933,12 +965,22 @@
             if (this.state.filters.time !== "any") {
               const now = new Date();
               jobs = jobs.filter((j) => {
-                const jobDate = new Date(j.postedAt || j.createdAt); // Handle both key names
-                if (isNaN(jobDate.getTime())) return true; // Keep if date invalid
+                const jobDate = new Date(j.postedAt || j.createdAt);
+                if (isNaN(jobDate.getTime())) return true;
                 const hours = (now - jobDate) / (1000 * 60 * 60);
                 if (this.state.filters.time === "24h") return hours <= 24;
                 if (this.state.filters.time === "7d") return hours <= 24 * 7;
                 return true;
+              });
+            }
+
+            // Salary filter
+            if (this.state.filters.salary < 200) {
+              jobs = jobs.filter((j) => {
+                const match = j.salary.match(/\d+/g);
+                if (!match) return true;
+                const minSalary = parseInt(match[0]);
+                return minSalary <= this.state.filters.salary;
               });
             }
 
@@ -990,7 +1032,7 @@
             container.innerHTML = filtered
               .map(
                 (job) => `
-                    <div onclick="page.openDrawer('${job.id}')" class="group bg-white p-6 rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-lg transition-all cursor-pointer relative overflow-hidden">
+                    <div onclick="page.openDrawer('${job._id}')" class="group bg-white p-6 rounded-xl border border-zinc-200 hover:border-zinc-300 hover:shadow-lg transition-all cursor-pointer relative overflow-hidden">
                         <div class="flex flex-col sm:flex-row gap-4 sm:items-start">
                             <div class="w-14 h-14 bg-zinc-100 rounded-lg flex items-center justify-center text-xl font-bold text-zinc-900 group-hover:scale-105 transition-transform flex-shrink-0">
                                 ${job.company.charAt(0)}
@@ -1014,7 +1056,7 @@
     
                                 <div class="flex items-center gap-4 text-sm text-zinc-400 mt-2">
                                     <span class="flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> ${this.timeAgo(job.postedAt || job.posted)}</span>
-                                    <span class="flex items-center gap-1"><i data-lucide="users" class="w-3 h-3"></i> ${Math.floor(Math.random() * 50) + 5} applicants</span>
+                                    <span class="flex items-center gap-1"><i data-lucide="users" class="w-3 h-3"></i> ${job.applicationCount || 0} applicants</span>
                                 </div>
                             </div>
                         </div>
