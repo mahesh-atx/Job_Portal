@@ -86,6 +86,7 @@
       <span id="toast-message">Notification</span>
     </div>
 
+    <script src="api.js"></script>
     <script src="store.js"></script>
     <script src="utils.js"></script>
     <script>
@@ -94,9 +95,15 @@
         return params.get("id");
       }
 
-      function renderJobDetails() {
+      async function renderJobDetails() {
         const jobId = getJobIdFromUrl();
-        const job = Store.db.jobs.find((j) => j.id === jobId);
+        if (!jobId) {
+          document.getElementById("app-content").innerHTML =
+            '<div class="p-10 text-center text-zinc-500">Invalid job link</div>';
+          return;
+        }
+
+        const job = await Store.getJobById(jobId);
         const content = document.getElementById("app-content");
 
         if (!job) {
@@ -105,12 +112,25 @@
           return;
         }
 
-        const employer = Store.db.users.find((u) => u.id === job.employerId);
-        const hasApplied =
-          Store.currentUser &&
-          Store.getMyApplications().find((a) => a.jobId === job.id);
+        // API populates employerId, so accessing fields directly
+        const employer = job.employerId || {
+          company: "Unknown Company",
+          bio: "",
+        };
+        const myApplications = Store.currentUser
+          ? await Store.getMyApplications()
+          : [];
+
+        // Check if user is owner (compare IDs)
         const isOwner =
-          Store.currentUser && Store.currentUser.id === job.employerId;
+          Store.currentUser &&
+          Store.currentUser._id === (employer._id || employer);
+
+        // Check if user has applied (compare job IDs)
+        const hasApplied = myApplications.find(
+          (a) => (a.jobId._id || a.jobId) === job._id,
+        );
+
         const dashboardPage = Store.currentUser
           ? Store.currentUser.role === "employer"
             ? "employer-dashboard.html"
@@ -164,12 +184,12 @@
                                       ? `<div class="bg-zinc-100 text-zinc-600 p-4 rounded-lg text-center text-sm font-medium">You posted this job</div>`
                                       : hasApplied
                                         ? `<button disabled class="w-full py-3 bg-green-600 text-white rounded-xl font-bold opacity-90 cursor-not-allowed flex items-center justify-center gap-2"><i data-lucide="check" class="w-4 h-4"></i> Application Sent</button>`
-                                        : `<button onclick="handleApply('${job.id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`
+                                        : `<button onclick="handleApply('${job._id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`
                                 }
                                 <div class="mt-6 pt-6 border-t border-zinc-100 space-y-4">
                                     <div>
                                         <div class="text-xs text-zinc-500 uppercase tracking-wide font-semibold mb-1">Posted</div>
-                                        <div class="text-sm text-zinc-900">${new Date(job.postedAt).toLocaleDateString()}</div>
+                                        <div class="text-sm text-zinc-900">${new Date(job.postedAt || job.createdAt).toLocaleDateString()}</div>
                                     </div>
                                     <div>
                                         <div class="text-xs text-zinc-500 uppercase tracking-wide font-semibold mb-1">Experience Level</div>
@@ -200,7 +220,7 @@
         Utils.initIcons();
       }
 
-      function handleApply(jobId) {
+      async function handleApply(jobId) {
         if (!Store.currentUser) {
           Utils.toast("Please sign in to apply");
           setTimeout(() => Utils.navigate("auth.html"), 1000);
@@ -208,7 +228,7 @@
         }
 
         try {
-          Store.applyToJob(jobId);
+          await Store.applyToJob(jobId);
           Utils.toast("Application sent successfully!");
           setTimeout(() => renderJobDetails(), 1000);
         } catch (err) {
@@ -217,8 +237,8 @@
       }
 
       // Initialize page
-      document.addEventListener("DOMContentLoaded", () => {
-        Store.init();
+      document.addEventListener("DOMContentLoaded", async () => {
+        await Store.init();
         Utils.updateNav(Store.currentUser !== null, "job-details");
         renderJobDetails();
       });

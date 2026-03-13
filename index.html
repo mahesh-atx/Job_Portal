@@ -603,6 +603,7 @@
       <span id="toast-message">Notification</span>
     </div>
 
+    <script src="api.js"></script>
     <script src="store.js"></script>
     <script src="utils.js"></script>
     <script>
@@ -674,14 +675,14 @@
         }
       }
 
-      function handleModalAuth(event) {
+      async function handleModalAuth(event) {
         event.preventDefault();
         const form = event.target;
         const data = Utils.getFormData(form);
 
         try {
           if (currentAuthMode === "register") {
-            Store.register(
+            await Store.register(
               data.name,
               data.email,
               data.password,
@@ -690,7 +691,7 @@
             );
             Utils.toast("Account created successfully!");
           } else {
-            Store.login(data.email, data.password);
+            await Store.login(data.email, data.password);
             Utils.toast("Welcome back!");
           }
 
@@ -707,8 +708,8 @@
       }
 
       // Initialize page
-      document.addEventListener("DOMContentLoaded", () => {
-        Store.init();
+      document.addEventListener("DOMContentLoaded", async () => {
+        await Store.init();
         Utils.updateNav(Store.currentUser !== null, "landing");
         Utils.initIcons();
 

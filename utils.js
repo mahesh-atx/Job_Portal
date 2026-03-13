@@ -26,7 +26,7 @@ const Utils = {
 
     // Check authentication and redirect if needed
     requireAuth(requiredRole = null) {
-        Store.init();
+        // Note: Store.init() should be awaited before calling this function
         if (!Store.currentUser) {
             this.navigate('auth.html');
             return false;
@@ -40,7 +40,7 @@ const Utils = {
 
     // Redirect if already logged in
     redirectIfAuthenticated() {
-        Store.init();
+        // Note: Store.init() should be awaited before calling this function
         if (Store.currentUser) {
             const dashboardPage = Store.currentUser.role === 'employer' ? 
                 'employer-dashboard.html' : 'seeker-dashboard.html';

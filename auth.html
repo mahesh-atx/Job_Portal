@@ -490,6 +490,7 @@
       <span id="toast-message">Notification</span>
     </div>
 
+    <script src="api.js"></script>
     <script src="store.js"></script>
     <script src="utils.js"></script>
     <script>
@@ -521,13 +522,13 @@
         Utils.initIcons();
       }
 
-      function handleAuth(event) {
+      async function handleAuth(event) {
         event.preventDefault();
         const form = event.target;
         const data = Utils.getFormData(form);
 
         try {
-          Store.register(
+          await Store.register(
             data.name,
             data.email,
             data.password,
@@ -547,30 +548,43 @@
         }
       }
 
-      function handleModalAuth(event) {
+      async function handleModalAuth(event) {
         event.preventDefault();
         const form = event.target;
         const data = Utils.getFormData(form);
 
         try {
-          Store.login(data.email, data.password);
+          console.log("[FRONTEND] Starting login...");
+          await Store.login(data.email, data.password);
+          console.log("[FRONTEND] Login successful");
+          console.log("[FRONTEND] Current user:", Store.currentUser);
+
           Utils.toast("Welcome back!");
 
           // Close modal and redirect
           Utils.closeAuthModal();
+
           const dashboardPage =
             Store.currentUser.role === "employer"
               ? "employer-dashboard.html"
               : "seeker-dashboard.html";
-          setTimeout(() => Utils.navigate(dashboardPage), 500);
+
+          console.log("[FRONTEND] Redirecting to:", dashboardPage);
+          console.log("[FRONTEND] User role:", Store.currentUser.role);
+
+          setTimeout(() => {
+            console.log("[FRONTEND] Executing redirect now...");
+            Utils.navigate(dashboardPage);
+          }, 500);
         } catch (err) {
+          console.error("[FRONTEND] Login error:", err);
           Utils.toast(err.message);
         }
       }
 
       // Initialize page
-      document.addEventListener("DOMContentLoaded", () => {
-        Store.init();
+      document.addEventListener("DOMContentLoaded", async () => {
+        await Store.init();
         Utils.redirectIfAuthenticated();
         Utils.initIcons();
 

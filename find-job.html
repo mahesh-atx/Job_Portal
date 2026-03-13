@@ -575,6 +575,7 @@
       </div>
     </div>
 
+    <script src="api.js"></script>
     <script src="store.js"></script>
     <script src="utils.js"></script>
     <script>
@@ -589,8 +590,8 @@
           isLoading: false,
         },
 
-        init() {
-          Store.init();
+        async init() {
+          await Store.init();
           Utils.updateNav(Store.currentUser !== null, "find-job");
           this.triggerLoading(); // Start with loading state
           Utils.initIcons();
@@ -668,16 +669,22 @@
             .join("");
         },
 
-        openDrawer(jobId) {
-          const job = Store.db.jobs.find((j) => j.id === jobId);
+        async openDrawer(jobId) {
+          const job = await Store.getJobById(jobId);
           if (!job) return;
-          const employer = Store.db.users.find((u) => u.id === job.employerId);
+
+          // API populates employerId
+          const employer = job.employerId || { company: "Unknown Company" };
           const myApplications = Store.currentUser
-            ? Store.getMyApplications()
+            ? await Store.getMyApplications()
             : [];
-          const hasApplied = myApplications.find((a) => a.jobId === job.id);
+
+          const hasApplied = myApplications.find(
+            (a) => (a.jobId._id || a.jobId) === job._id,
+          );
           const isOwner =
-            Store.currentUser && Store.currentUser.id === job.employerId;
+            Store.currentUser &&
+            Store.currentUser._id === (employer._id || employer);
 
           // Populate Content
           const content = document.getElementById("drawer-content");
@@ -685,12 +692,12 @@
                 <!-- Header -->
                 <div class="flex items-start gap-5 mb-8">
                     <div class="w-20 h-20 bg-white border border-zinc-200 rounded-2xl flex items-center justify-center shadow-sm flex-shrink-0">
-                        <span class="text-3xl font-bold text-zinc-900">${employer?.company ? employer.company.charAt(0) : "C"}</span>
+                        <span class="text-3xl font-bold text-zinc-900">${employer.company ? employer.company.charAt(0) : "C"}</span>
                     </div>
                     <div>
                         <h1 class="text-2xl font-bold text-zinc-900 leading-tight mb-1">${job.title}</h1>
                         <div class="flex items-center gap-2 text-zinc-500 font-medium">
-                            <span>${employer?.company || "Company"}</span>
+                            <span>${employer.company || "Company"}</span>
                             <span>•</span>
                             <span class="text-zinc-400">${job.location}</span>
                         </div>
@@ -720,7 +727,7 @@
                     <div class="p-4 bg-zinc-50 rounded-xl border border-zinc-100">
                         <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-1">Posted</div>
                         <div class="font-bold text-zinc-900 flex items-center gap-2">
-                             <i data-lucide="calendar" class="w-4 h-4 text-zinc-500"></i> ${this.timeAgo(job.postedAt || job.posted)}
+                             <i data-lucide="calendar" class="w-4 h-4 text-zinc-500"></i> ${this.timeAgo(job.postedAt || job.createdAt)}
                         </div>
                     </div>
                 </div>
@@ -742,8 +749,8 @@
                 <!-- Company Info Box -->
                 <div class="bg-zinc-900 rounded-xl p-6 text-white relative overflow-hidden">
                     <div class="relative z-10">
-                        <h4 class="font-bold text-lg mb-2">About ${employer?.company}</h4>
-                        <p class="text-zinc-400 text-sm leading-relaxed mb-4">${employer?.bio || "No company bio available."}</p>
+                        <h4 class="font-bold text-lg mb-2">About ${employer.company}</h4>
+                        <p class="text-zinc-400 text-sm leading-relaxed mb-4">${employer.bio || "No company bio available."}</p>
                         <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-zinc-500">
                             <span>Technology</span>
                             <span>•</span>
@@ -764,7 +771,7 @@
           } else if (!Store.currentUser) {
             footer.innerHTML = `<button onclick="window.location.href='auth.html'" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Sign In to Apply</button>`;
           } else {
-            footer.innerHTML = `<button onclick="page.handleApply('${job.id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`;
+            footer.innerHTML = `<button onclick="page.handleApply('${job._id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`;
           }
 
           // Show Drawer
@@ -792,9 +799,9 @@
           }, 300);
         },
 
-        handleApply(jobId) {
+        async handleApply(jobId) {
           try {
-            Store.applyToJob(jobId);
+            await Store.applyToJob(jobId);
             Utils.toast("Application sent successfully!");
             this.openDrawer(jobId); // Re-render drawer state
           } catch (err) {
@@ -859,7 +866,7 @@
           }, 300);
         },
 
-        renderJobs() {
+        async renderJobs() {
           try {
             const container = document.getElementById("jobs-container");
             const countEl = document.getElementById("job-count-header");
@@ -877,35 +884,32 @@
 
             let jobs = [];
             try {
-              const rawJobs = Store.getJobs() || [];
-              // Enrich jobs with company data
-              jobs = rawJobs.map((job) => {
-                const employer = Store.db.users.find(
-                  (u) => u.id === job.employerId,
-                );
-                return {
-                  ...job,
-                  company: employer
-                    ? employer.company || employer.name
-                    : "Unknown Company",
-                };
-              });
+              // Store.getJobs is async now
+              jobs = (await Store.getJobs()) || [];
+              // API should populate company data
+              jobs = jobs.map((job) => ({
+                ...job,
+                company:
+                  job.employerId && job.employerId.company
+                    ? job.employerId.company
+                    : job.employerId && job.employerId.name
+                      ? job.employerId.name
+                      : "Unknown Company",
+              }));
             } catch (e) {
               console.error("Store error:", e);
               // Attempt re-init if store fails
-              Store.init();
-              const rawJobs = Store.getJobs() || [];
-              jobs = rawJobs.map((job) => {
-                const employer = Store.db.users.find(
-                  (u) => u.id === job.employerId,
-                );
-                return {
-                  ...job,
-                  company: employer
-                    ? employer.company || employer.name
-                    : "Unknown Company",
-                };
-              });
+              await Store.init();
+              jobs = (await Store.getJobs()) || [];
+              jobs = jobs.map((job) => ({
+                ...job,
+                company:
+                  job.employerId && job.employerId.company
+                    ? job.employerId.company
+                    : job.employerId && job.employerId.name
+                      ? job.employerId.name
+                      : "Unknown Company",
+              }));
             }
 
             // Filtering
@@ -929,7 +933,7 @@
             if (this.state.filters.time !== "any") {
               const now = new Date();
               jobs = jobs.filter((j) => {
-                const jobDate = new Date(j.postedAt || j.posted); // Handle both key names if inconsistent
+                const jobDate = new Date(j.postedAt || j.createdAt); // Handle both key names
                 if (isNaN(jobDate.getTime())) return true; // Keep if date invalid
                 const hours = (now - jobDate) / (1000 * 60 * 60);
                 if (this.state.filters.time === "24h") return hours <= 24;
