@@ -1,5 +1,5 @@
 // API Client for Lumina Job Portal Backend
-const API_URL = 'http://localhost:5000/api';
+const API_URL = '/api';
 
 const API = {
   // Get auth token from localStorage
