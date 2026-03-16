@@ -8,6 +8,7 @@ const authRoutes = require('./routes/auth');
 const jobRoutes = require('./routes/jobs');
 const applicationRoutes = require('./routes/applications');
 const userRoutes = require('./routes/users');
+const uploadRoutes = require('./routes/upload');
 
 // Initialize express app
 const app = express();
@@ -20,7 +21,7 @@ app.use(cors());
 app.use(express.json({ limit: '10mb' })); // For base64 image uploads
 app.use(express.urlencoded({ extended: true }));
 
-// Serve static files (frontend)
+app.use('/uploads', express.static(__dirname + '/../uploads'));
 app.use(express.static(__dirname + '/../'));
 
 // Request logging middleware (development)
@@ -36,6 +37,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/jobs', jobRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/upload', uploadRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

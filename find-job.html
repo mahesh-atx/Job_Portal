@@ -794,7 +794,49 @@
           } else if (!Store.currentUser) {
             footer.innerHTML = `<button onclick="window.location.href='auth.html'" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Sign In to Apply</button>`;
           } else {
-            footer.innerHTML = `<button onclick="page.handleApply('${job._id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>`;
+            const hasResume = !!Store.currentUser.resume;
+            let resumeSection = '';
+            if (hasResume) {
+              resumeSection = `
+                <div class="flex items-center justify-between mb-2">
+                  <span class="text-sm font-bold text-zinc-900">Your Resume</span>
+                </div>
+                <div class="mb-4 flex flex-col gap-2">
+                  <div class="flex items-center justify-between p-3 border border-zinc-200 rounded-xl bg-zinc-50">
+                    <div class="flex items-center gap-3">
+                      <div class="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center">
+                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                      </div>
+                      <div>
+                        <div class="text-sm font-medium text-zinc-900 flex items-center gap-1">Attached from profile <i data-lucide="check-circle" class="w-3.5 h-3.5 text-green-500"></i></div>
+                        <a href="${Store.currentUser.resume}" target="_blank" class="text-xs text-blue-600 hover:underline">Preview</a>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="text-xs text-zinc-500 font-medium">Want to use a different resume?</div>
+                  <input type="file" id="apply-resume-file" accept=".pdf,.doc,.docx" class="w-full text-sm text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-zinc-100 file:text-zinc-700 hover:file:bg-zinc-200 transition">
+                </div>
+              `;
+            } else {
+              resumeSection = `
+                <div class="flex flex-col gap-2 mb-4">
+                  <span class="text-sm font-bold text-zinc-900">Attach Resume*</span>
+                  <div class="p-4 border-2 border-dashed border-zinc-300 rounded-xl bg-zinc-50 flex flex-col gap-3">
+                    <div class="flex items-center gap-2 text-red-500">
+                      <i data-lucide="file-text" class="w-5 h-5"></i> <span class="text-sm font-medium text-zinc-700">Please provide a resume</span>
+                    </div>
+                    <input type="file" id="apply-resume-file" required accept=".pdf,.doc,.docx" class="w-full text-sm text-zinc-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-zinc-200 file:text-zinc-800 hover:file:bg-zinc-300 transition cursor-pointer">
+                  </div>
+                </div>
+              `;
+            }
+
+            footer.innerHTML = `
+              <div class="w-full flex flex-col">
+                ${resumeSection}
+                <button id="apply-btn" onclick="page.handleApply('${job._id}')" class="w-full py-3 bg-zinc-900 text-white rounded-xl font-bold hover:bg-zinc-800 transition shadow-lg shadow-zinc-200">Apply Now</button>
+              </div>
+            `;
           }
 
           // Show Drawer
@@ -824,11 +866,31 @@
 
         async handleApply(jobId) {
           try {
-            await Store.applyToJob(jobId);
+            const applyBtn = document.getElementById('apply-btn');
+            if (applyBtn) {
+              applyBtn.innerHTML = 'Applying...';
+              applyBtn.disabled = true;
+            }
+
+            let finalResumeUrl = Store.currentUser?.resume || null;
+            const resumeInput = document.getElementById('apply-resume-file');
+            
+            if (resumeInput && resumeInput.files[0]) {
+              if (applyBtn) applyBtn.innerHTML = 'Uploading resume...';
+              const uploadRes = await API.upload.resume(resumeInput.files[0]);
+              finalResumeUrl = uploadRes.url;
+            }
+
+            await Store.applyToJob({ jobId, resume: finalResumeUrl });
             Utils.toast("Application sent successfully!");
             this.openDrawer(jobId); // Re-render drawer state
           } catch (err) {
-            Utils.toast(err.message);
+            Utils.toast(err.message || 'Failed to apply');
+            const applyBtn = document.getElementById('apply-btn');
+            if (applyBtn) {
+              applyBtn.innerHTML = 'Apply Now';
+              applyBtn.disabled = false;
+            }
           }
         },
 

@@ -190,6 +190,36 @@
                                         </button>
                                     </div>
                                     <div class="font-medium text-zinc-900">${Store.currentUser.bio || "No headline set"}</div>
+                                    ${Store.currentUser.resume ? `
+                                    <div class="mt-4 pt-4 border-t border-zinc-100">
+                                        <div class="text-sm text-zinc-500 mb-2">Resume</div>
+                                        <div class="flex items-center justify-between p-3 border border-zinc-200 rounded-xl bg-zinc-50">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center">
+                                                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                                                </div>
+                                                <div>
+                                                    <div class="text-sm font-medium text-zinc-900">Resume.pdf</div>
+                                                    <div class="text-xs text-zinc-500">View or download</div>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <a href="${Store.currentUser.resume}" target="_blank" class="p-2 text-zinc-400 hover:text-blue-600 hover:bg-blue-50 rounded transition" title="View Resume">
+                                                    <i data-lucide="eye" class="w-4 h-4"></i>
+                                                </a>
+                                                <button onclick="showEditProfileForm()" class="p-2 text-zinc-400 hover:text-zinc-900 hover:bg-zinc-200 rounded transition" title="Update Resume">
+                                                    <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>` : `
+                                    <div class="mt-4 pt-4 border-t border-zinc-100">
+                                        <div class="text-sm text-zinc-500 mb-2">Resume</div>
+                                        <button onclick="showEditProfileForm()" class="w-full flex flex-col items-center justify-center p-4 border-2 border-dashed border-zinc-300 rounded-xl text-zinc-500 hover:border-zinc-500 hover:text-zinc-700 bg-zinc-50 hover:bg-zinc-100 transition">
+                                            <i data-lucide="upload-cloud" class="w-6 h-6 mb-2"></i>
+                                            <span class="text-sm font-medium">Click to upload your resume</span>
+                                        </button>
+                                    </div>`}
                                 </div>
                                 <h3 class="font-bold text-sm text-zinc-900 mb-4 uppercase tracking-wide">Application Status</h3>
                                 <div class="space-y-3">
@@ -505,6 +535,25 @@
                             <p class="text-xs text-zinc-500 mt-1">This appears on your profile and applications</p>
                         </div>
 
+                        <div>
+                            <label class="block text-sm font-medium text-zinc-700 mb-1.5">Resume</label>
+                            ${user.resume ? `
+                            <div class="mb-3 flex items-center justify-between p-3 border border-zinc-200 rounded-xl bg-zinc-50">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 bg-red-50 text-red-500 rounded-lg flex items-center justify-center">
+                                        <i data-lucide="file-text" class="w-5 h-5"></i>
+                                    </div>
+                                    <div>
+                                        <div class="text-sm text-zinc-600 flex items-center gap-1"><i data-lucide="check-circle" class="w-3 h-3 text-green-500"></i> Uploaded</div>
+                                        <a href="${user.resume}" target="_blank" class="text-xs text-blue-600 hover:underline">View current</a>
+                                    </div>
+                                </div>
+                            </div>
+                            ` : ''}
+                            <input name="resumeFile" type="file" accept=".pdf,.doc,.docx" class="w-full text-sm text-zinc-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-zinc-100 file:text-zinc-700 hover:file:bg-zinc-200 transition">
+                            <p class="text-xs text-zinc-500 mt-2">${user.resume ? 'Select a new file to replace the current one.' : 'Upload your resume in PDF or Word format.'}</p>
+                        </div>
+
                         <div class="pt-4 flex gap-3">
                             <button type="submit" class="flex-1 bg-zinc-900 text-white py-2.5 rounded-lg font-bold hover:bg-zinc-800 transition shadow-sm">
                                 Save Changes
@@ -519,13 +568,33 @@
         Utils.initIcons();
       }
 
-      function handleUpdateProfile(event) {
+      async function handleUpdateProfile(event) {
         event.preventDefault();
-        const data = Utils.getFormData(event.target);
-        Store.updateUserProfile(Store.currentUser.id, data);
-        Utils.toast("Profile Updated Successfully");
-        Utils.updateNav(true, "seeker-dashboard"); // Refresh nav with new name
-        renderDashboard();
+        const form = event.target;
+        const data = Utils.getFormData(form);
+        
+        try {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.textContent = 'Saving...';
+            submitBtn.disabled = true;
+
+            const resumeInput = form.querySelector('input[name="resumeFile"]');
+            if (resumeInput && resumeInput.files[0]) {
+                submitBtn.textContent = 'Uploading resume...';
+                const uploadRes = await API.upload.resume(resumeInput.files[0]);
+                data.resume = uploadRes.url;
+            }
+
+            submitBtn.textContent = 'Saving profile...';
+            await Store.updateUserProfile(Store.currentUser._id || Store.currentUser.id, data);
+            
+            Utils.toast("Profile Updated Successfully");
+            Utils.updateNav(true, "seeker-dashboard"); // Refresh nav with new name
+            renderDashboard();
+        } catch (err) {
+            Utils.toast(err.message || "Failed to update profile");
+        }
       }
 
       // Initialize page

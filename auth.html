@@ -317,6 +317,19 @@
                       placeholder="e.g. Senior Product Designer"
                     />
                   </div>
+
+                  <!-- Resume Upload -->
+                  <div class="mt-6">
+                    <label class="block text-sm font-semibold text-zinc-700 mb-2">Resume (Optional)</label>
+                    <div id="resume-dropzone" class="border-2 border-dashed border-zinc-300 rounded-xl p-6 text-center hover:border-zinc-500 hover:bg-zinc-50 transition cursor-pointer relative overflow-hidden flex flex-col items-center justify-center min-h-[120px]" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)" onclick="document.getElementById('resumeFile').click()">
+                      <input name="resumeFile" type="file" id="resumeFile" accept=".pdf,.doc,.docx" class="hidden" onchange="updateFileName(this)">
+                      <div id="resume-icon-container" class="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-3 transition-colors">
+                        <i data-lucide="file-text" class="w-6 h-6"></i>
+                      </div>
+                      <div id="resume-file-name" class="font-medium text-zinc-900 mb-1">Click to upload or drag and drop</div>
+                      <div class="text-xs text-zinc-500">PDF, DOC, DOCX (max. 5MB)</div>
+                    </div>
+                  </div>
                 </div>
 
                 <!-- Employer Specific Fields -->
@@ -494,6 +507,57 @@
     <script src="store.js"></script>
     <script src="utils.js"></script>
     <script>
+      function handleDragOver(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropzone = document.getElementById('resume-dropzone');
+        dropzone.classList.add('border-red-500', 'bg-red-50');
+        dropzone.classList.remove('border-zinc-300', 'bg-white');
+      }
+
+      function handleDragLeave(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        const dropzone = document.getElementById('resume-dropzone');
+        dropzone.classList.remove('border-red-500', 'bg-red-50');
+        dropzone.classList.add('border-zinc-300', 'bg-white');
+      }
+
+      function handleDrop(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        handleDragLeave(e);
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          const fileInput = document.getElementById('resumeFile');
+          fileInput.files = files;
+          updateFileName(fileInput);
+        }
+      }
+
+      function updateFileName(input) {
+        const fileNameEl = document.getElementById("resume-file-name");
+        const iconContainer = document.getElementById("resume-icon-container");
+        
+        if (input.files && input.files.length > 0) {
+          const file = input.files[0];
+          fileNameEl.textContent = file.name;
+          fileNameEl.classList.add('text-green-600');
+          iconContainer.classList.replace('bg-red-50', 'bg-green-50');
+          iconContainer.classList.replace('text-red-600', 'text-green-600');
+          iconContainer.innerHTML = '<i data-lucide="check-circle" class="w-6 h-6"></i>';
+          Utils.initIcons();
+        } else {
+          fileNameEl.textContent = "Click to upload or drag and drop";
+          fileNameEl.classList.remove('text-green-600');
+          iconContainer.classList.replace('bg-green-50', 'bg-red-50');
+          iconContainer.classList.replace('text-green-600', 'text-red-600');
+          iconContainer.innerHTML = '<i data-lucide="file-text" class="w-6 h-6"></i>';
+          Utils.initIcons();
+        }
+      }
+
       function switchRole(role) {
         const seekerFields = document.getElementById("seeker-fields");
         const employerFields = document.getElementById("employer-fields");
@@ -528,13 +592,40 @@
         const data = Utils.getFormData(form);
 
         try {
+          // Changed button text to show loading state
+          const submitBtn = form.querySelector('button[type="submit"]');
+          const originalText = submitBtn.textContent;
+          submitBtn.textContent = 'Registering...';
+          submitBtn.disabled = true;
+
+          let resumeUrl = null;
+          const resumeInput = form.querySelector('input[name="resumeFile"]');
+          
+          if (data.role === 'seeker' && resumeInput && resumeInput.files[0]) {
+            submitBtn.textContent = 'Uploading resume...';
+            try {
+              const uploadRes = await API.upload.resume(resumeInput.files[0]);
+              resumeUrl = uploadRes.url;
+            } catch (err) {
+              Utils.toast('Failed to upload resume, continuing registration...');
+              console.error(err);
+            }
+          }
+
+          submitBtn.textContent = 'Registering...';
+          
           await Store.register(
             data.name,
             data.email,
             data.password,
             data.role,
             data.extraField,
+            resumeUrl
           );
+          
+          submitBtn.textContent = originalText;
+          submitBtn.disabled = false;
+          
           Utils.toast("Account created successfully!");
 
           // Redirect to appropriate dashboard

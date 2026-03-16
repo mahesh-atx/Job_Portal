@@ -34,7 +34,7 @@ const updateUserProfile = async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    const { name, email, company, bio, skills, photo } = req.body;
+    const { name, email, company, bio, skills, photo, resume } = req.body;
     
     user.name = name || user.name;
     user.email = email || user.email;
@@ -46,6 +46,7 @@ const updateUserProfile = async (req, res) => {
     user.bio = bio !== undefined ? bio : user.bio;
     user.skills = skills !== undefined ? skills : user.skills;
     user.photo = photo !== undefined ? photo : user.photo;
+    user.resume = resume !== undefined ? resume : user.resume;
     
     const updatedUser = await user.save();
     
@@ -57,7 +58,8 @@ const updateUserProfile = async (req, res) => {
       company: updatedUser.company,
       bio: updatedUser.bio,
       skills: updatedUser.skills,
-      photo: updatedUser.photo
+      photo: updatedUser.photo,
+      resume: updatedUser.resume
     });
   } catch (error) {
     console.error(error);

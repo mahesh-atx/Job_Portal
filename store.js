@@ -25,7 +25,7 @@ const Store = {
         }
     },
 
-    async register(name, email, password, role, extraField) {
+    async register(name, email, password, role, extraField, resumeUrl) {
         try {
             const userData = {
                 name,
@@ -33,7 +33,8 @@ const Store = {
                 password,
                 role,
                 company: role === 'employer' ? extraField : null,
-                bio: role === 'seeker' ? extraField : 'Hiring Manager'
+                bio: role === 'seeker' ? extraField : 'Hiring Manager',
+                resume: resumeUrl || null
             };
 
             const user = await API.auth.register(userData);

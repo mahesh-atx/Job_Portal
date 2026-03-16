@@ -6,7 +6,7 @@ const Job = require('../models/Job');
 // @access  Private (Seeker only)
 const applyToJob = async (req, res) => {
   try {
-    const { jobId } = req.body;
+    const { jobId, resume } = req.body;
     
     // Check if job exists
     const job = await Job.findById(jobId);
@@ -28,12 +28,13 @@ const applyToJob = async (req, res) => {
     const application = await Application.create({
       jobId,
       seekerId: req.user._id,
-      employerId: job.employerId
+      employerId: job.employerId,
+      resume
     });
     
     const populatedApplication = await Application.findById(application._id)
       .populate('jobId', 'title type salary location')
-      .populate('seekerId', 'name email bio skills photo')
+      .populate('seekerId', 'name email bio skills photo resume')
       .populate('employerId', 'name company email');
     
     res.status(201).json(populatedApplication);
@@ -60,7 +61,7 @@ const getApplicationsForJob = async (req, res) => {
     }
     
     const applications = await Application.find({ jobId: req.params.jobId })
-      .populate('seekerId', 'name email bio skills photo')
+      .populate('seekerId', 'name email bio skills photo resume')
       .populate('jobId', 'title type salary location')
       .sort({ appliedAt: -1 });
     
@@ -116,7 +117,7 @@ const updateApplicationStatus = async (req, res) => {
     
     const populatedApplication = await Application.findById(application._id)
       .populate('jobId', 'title type salary location')
-      .populate('seekerId', 'name email bio skills photo')
+      .populate('seekerId', 'name email bio skills photo resume')
       .populate('employerId', 'name company email');
     
     res.json(populatedApplication);

@@ -40,6 +40,10 @@ const userSchema = new mongoose.Schema({
   photo: {
     type: String,
     default: null
+  },
+  resume: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true

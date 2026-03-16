@@ -13,7 +13,7 @@ const generateToken = (id) => {
 // @access  Public
 const register = async (req, res) => {
   try {
-    const { name, email, password, role, company, bio } = req.body;
+    const { name, email, password, role, company, bio, resume } = req.body;
 
     // Check if user exists
     const userExists = await User.findOne({ email });
@@ -28,7 +28,8 @@ const register = async (req, res) => {
       password,
       role,
       company: role === 'employer' ? company : null,
-      bio: bio || (role === 'employer' ? 'Hiring Manager' : '')
+      bio: bio || (role === 'employer' ? 'Hiring Manager' : ''),
+      resume: role === 'seeker' ? resume : null
     });
 
     if (user) {
@@ -39,6 +40,7 @@ const register = async (req, res) => {
         role: user.role,
         company: user.company,
         bio: user.bio,
+        resume: user.resume,
         token: generateToken(user._id)
       });
     }
@@ -74,6 +76,7 @@ const login = async (req, res) => {
         bio: user.bio,
         skills: user.skills,
         photo: user.photo,
+        resume: user.resume,
         token: generateToken(user._id)
       });
     } else {

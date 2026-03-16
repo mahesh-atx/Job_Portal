@@ -120,10 +120,12 @@ const API = {
 
   // Applications
   applications: {
-    async apply(jobId) {
+    async apply(jobData) {
+      // jobData can be an object { jobId, resume } or just jobId (legacy support)
+      const body = typeof jobData === 'string' ? { jobId: jobData } : jobData;
       return await API.request('/applications', {
         method: 'POST',
-        body: JSON.stringify({ jobId })
+        body: JSON.stringify(body)
       });
     },
 
@@ -154,6 +156,36 @@ const API = {
         method: 'PUT',
         body: JSON.stringify(updates)
       });
+    }
+  },
+
+  // Uploads
+  upload: {
+    async resume(file) {
+      const formData = new FormData();
+      formData.append('resume', file);
+      
+      const token = API.getToken();
+      const headers = {};
+      if (token) headers.Authorization = `Bearer ${token}`;
+
+      try {
+        const response = await fetch(`${API_URL}/upload/resume`, {
+          method: 'POST',
+          headers, // Let browser set Content-Type with boundary for FormData
+          body: formData
+        });
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.message || 'Error uploading file');
+        }
+        
+        return data; // { message, url }
+      } catch (error) {
+        console.error('Upload Error:', error);
+        throw error;
+      }
     }
   }
 };
